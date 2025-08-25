@@ -10,7 +10,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-image: url('Images/corkboard.png');
+            background-image: url('Images/corkboard.jpg');
             background-size: cover;
             font-family: 'Comic Sans MS', cursive;
             height: 100vh;
@@ -69,10 +69,11 @@
         }
         
         #corkboard {
-            position: relative;
+            position: absolute;
             width: 100%;
-            height: calc(100vh - 100px);
-            overflow: hidden;
+            height: 100vh;
+            overflow: visible;
+            z-index: 1;
         }
         
         .note {
@@ -86,7 +87,6 @@
             align-items: center;
             transition: box-shadow 0.3s;
             z-index: 10;
-            resize: none;
             overflow: hidden;
         }
         
@@ -134,6 +134,7 @@
             padding: 5px;
             overflow-wrap: break-word;
             cursor: text;
+            overflow: auto;
         }
         
         .note img {
@@ -256,6 +257,7 @@
             font-size: 12px;
             max-width: 200px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 101;
         }
     </style>
 </head>
@@ -323,10 +325,6 @@
             try {
                 console.log("Initializing Firebase...");
                 
-                // Test Firestore connection
-                const testDoc = await db.collection("test").doc("test").get();
-                console.log("Firestore test successful", testDoc);
-                
                 // Sign in anonymously
                 console.log("Attempting anonymous sign-in...");
                 const cred = await auth.signInAnonymously();
@@ -350,6 +348,8 @@
                             removeNoteFromBoard(change.doc.id);
                         }
                     });
+                }, error => {
+                    console.error("Firestore listener error:", error);
                 });
                 
                 loadingElement.style.display = 'none';
@@ -365,6 +365,8 @@
                 querySnapshot.forEach(doc => {
                     addNoteToBoard(doc.data());
                 });
+            }).catch(error => {
+                console.error("Error loading notes:", error);
             });
         }
 
@@ -378,10 +380,10 @@
                 // Create pinned image element
                 noteElement = document.createElement('div');
                 noteElement.className = 'pinned-image';
-                noteElement.style.left = noteData.x + 'px';
-                noteElement.style.top = noteData.y + 'px';
-                noteElement.style.width = noteData.width + 'px';
-                noteElement.style.height = noteData.height + 'px';
+                noteElement.style.left = (noteData.x || 100) + 'px';
+                noteElement.style.top = (noteData.y || 100) + 'px';
+                noteElement.style.width = (noteData.width || 200) + 'px';
+                noteElement.style.height = (noteData.height || 200) + 'px';
                 noteElement.dataset.noteId = noteData.id;
                 
                 const pin = document.createElement('div');
@@ -390,16 +392,20 @@
                 
                 const imgElement = document.createElement('img');
                 imgElement.src = noteData.content;
+                imgElement.onerror = function() {
+                    console.error("Failed to load image:", noteData.content);
+                    this.style.display = 'none';
+                };
                 noteElement.appendChild(imgElement);
                 
             } else {
                 // Create sticky note element
                 noteElement = document.createElement('div');
                 noteElement.className = 'note';
-                noteElement.style.left = noteData.x + 'px';
-                noteElement.style.top = noteData.y + 'px';
-                noteElement.style.width = noteData.width + 'px';
-                noteElement.style.height = noteData.height + 'px';
+                noteElement.style.left = (noteData.x || 100) + 'px';
+                noteElement.style.top = (noteData.y || 100) + 'px';
+                noteElement.style.width = (noteData.width || 200) + 'px';
+                noteElement.style.height = (noteData.height || 200) + 'px';
                 noteElement.dataset.noteId = noteData.id;
                 noteElement.setAttribute('data-color', noteData.color || 'yellow');
                 
@@ -429,7 +435,9 @@
                 deleteBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (confirm('Delete this note?')) {
-                        db.collection("notes").doc(noteData.id).delete();
+                        db.collection("notes").doc(noteData.id).delete().catch(error => {
+                            console.error("Error deleting note:", error);
+                        });
                     }
                 });
                 noteElement.appendChild(deleteBtn);
@@ -452,10 +460,13 @@
         function updateNoteOnBoard(noteData) {
             const noteElement = document.querySelector(`[data-note-id="${noteData.id}"]`);
             if (noteElement) {
-                noteElement.style.left = noteData.x + 'px';
-                noteElement.style.top = noteData.y + 'px';
-                noteElement.style.width = noteData.width + 'px';
-                noteElement.style.height = noteData.height + 'px';
+                noteElement.style.left = (noteData.x || 100) + 'px';
+                noteElement.style.top = (noteData.y || 100) + 'px';
+                
+                if (noteData.width && noteData.height) {
+                    noteElement.style.width = noteData.width + 'px';
+                    noteElement.style.height = noteData.height + 'px';
+                }
                 
                 if (noteData.type === 'text') {
                     const textElement = noteElement.querySelector('.note-text');
@@ -500,9 +511,9 @@
                 const newX = startLeft + dx;
                 const newY = startTop + dy;
                 
-                // Keep within bounds
+                // Keep within bounds (allowing notes to go behind the input area)
                 const maxX = window.innerWidth - element.offsetWidth;
-                const maxY = window.innerHeight - element.offsetHeight;
+                const maxY = window.innerHeight;
                 
                 element.style.left = Math.max(0, Math.min(maxX, newX)) + 'px';
                 element.style.top = Math.max(0, Math.min(maxY, newY)) + 'px';
@@ -517,6 +528,8 @@
                     db.collection("notes").doc(noteId).update({
                         x: parseInt(element.style.left),
                         y: parseInt(element.style.top)
+                    }).catch(error => {
+                        console.error("Error updating note position:", error);
                     });
                 }
             });
@@ -554,15 +567,9 @@
                 const newWidth = Math.max(150, startWidth + dx);
                 const newHeight = Math.max(150, startHeight + dy);
                 
-                // Adjust position to resize from the bottom-right corner
-                const newX = startLeft - (newWidth - startWidth);
-                const newY = startTop - (newHeight - startHeight);
-                
-                // Apply new size and position
+                // Apply new size
                 element.style.width = newWidth + 'px';
                 element.style.height = newHeight + 'px';
-                element.style.left = newX + 'px';
-                element.style.top = newY + 'px';
             });
             
             document.addEventListener('mouseup', function() {
@@ -570,12 +577,12 @@
                     isResizing = false;
                     element.style.zIndex = 10;
                     
-                    // Update size and position in database
+                    // Update size in database
                     db.collection("notes").doc(noteId).update({
                         width: parseInt(element.style.width),
-                        height: parseInt(element.style.height),
-                        x: parseInt(element.style.left),
-                        y: parseInt(element.style.top)
+                        height: parseInt(element.style.height)
+                    }).catch(error => {
+                        console.error("Error updating note size:", error);
                     });
                 }
             });
@@ -599,8 +606,14 @@
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
-                db.collection("notes").doc(newNote.id).set(newNote);
-                document.getElementById('text-note').value = '';
+                db.collection("notes").doc(newNote.id).set(newNote)
+                    .then(() => {
+                        console.log("Text note added successfully");
+                        document.getElementById('text-note').value = '';
+                    })
+                    .catch(error => {
+                        console.error("Error adding text note:", error);
+                    });
             }
         });
 
@@ -626,7 +639,16 @@
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     
-                    db.collection("notes").doc(newNote.id).set(newNote);
+                    db.collection("notes").doc(newNote.id).set(newNote)
+                        .then(() => {
+                            console.log("Image note added successfully");
+                        })
+                        .catch(error => {
+                            console.error("Error adding image note:", error);
+                        });
+                };
+                reader.onerror = function(error) {
+                    console.error("Error reading file:", error);
                 };
                 reader.readAsDataURL(this.files[0]);
                 this.value = ''; // Reset file input
@@ -647,6 +669,8 @@
                     if (newText !== null) {
                         db.collection("notes").doc(noteId).update({
                             content: newText
+                        }).catch(error => {
+                            console.error("Error updating note text:", error);
                         });
                     }
                 }
