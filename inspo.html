@@ -10,14 +10,32 @@
         body {
             margin: 0;
             padding: 0;
-            background-image: url('Images/corkboard.png');
-            background-size: cover;
+            background-color: #8b5a2b;
             font-family: 'Comic Sans MS', cursive;
             height: 100vh;
             overflow: hidden;
             position: relative;
             cursor: default;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+        
+        .corkboard-frame {
+            width: 98vw;
+            height: 96vh;
+            border: 12px solid #a52a2a;
+            border-radius: 4px;
+            box-shadow: 
+                0 0 0 4px #8b4513,
+                inset 0 0 20px rgba(0, 0, 0, 0.5),
+                0 8px 20px rgba(0, 0, 0, 0.5);
+            background-image: url('Images/corkboard.png');
+            background-size: cover;
+            position: relative;
+            overflow: hidden;
+        }
+        
         .loading {
             position: fixed;
             top: 50%;
@@ -32,7 +50,7 @@
         
         #upload-container {
             position: fixed;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(255, 255, 255, 0.8);
@@ -71,7 +89,7 @@
         #corkboard {
             position: absolute;
             width: 100%;
-            height: 100vh;
+            height: 100%;
             overflow: visible;
             z-index: 1;
         }
@@ -98,14 +116,24 @@
             z-index: 20;
         }
         
+        .pin-container {
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 25;
+            width: 24px;
+            height: 24px;
+            pointer-events: none;
+        }
+        
         .pin {
             width: 24px;
             height: 24px;
             background-image: url('Images/thumbtack.png');
             background-size: contain;
             background-repeat: no-repeat;
-            margin-bottom: 5px;
-            position: relative;
+            pointer-events: auto;
             cursor: move;
         }
         
@@ -144,14 +172,6 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-        }
-        
-        .pinned-image .pin {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 15;
         }
         
         .delete-btn {
@@ -236,8 +256,8 @@
         /* Instructions */
         .instructions {
             position: fixed;
-            top: 10px;
-            right: 10px;
+            top: 20px;
+            right: 20px;
             background: rgba(255, 255, 255, 0.8);
             padding: 10px;
             border-radius: 8px;
@@ -295,6 +315,12 @@
         </div>
     </div>
 
+    <div class="corkboard-frame">
+        <div id="corkboard">
+            <!-- Notes and images will appear here -->
+        </div>
+    </div>
+
     <div id="upload-container">
         <input type="text" id="text-note" placeholder="Write your note...">
         <div class="color-picker">
@@ -307,10 +333,6 @@
         <input type="file" id="image-upload" accept="image/*" style="display: none;">
         <button id="add-text">Add Text Note</button>
         <button id="add-image">Add Image</button>
-    </div>
-
-    <div id="corkboard">
-        <!-- Notes and images will appear here -->
     </div>
 
     <script>
@@ -340,6 +362,7 @@
         const corkboard = document.getElementById('corkboard');
         const loadingElement = document.getElementById('loading');
         const instructions = document.getElementById('instructions');
+        const corkboardFrame = document.querySelector('.corkboard-frame');
 
         // Initialize app
         initApp();
@@ -425,10 +448,6 @@
                 noteElement.dataset.noteId = noteData.id;
                 noteElement.style.zIndex = noteData.zIndex || highestZIndex++;
                 
-                const pin = document.createElement('div');
-                pin.className = 'pin';
-                noteElement.appendChild(pin);
-                
                 const imgElement = document.createElement('img');
                 imgElement.src = noteData.content;
                 imgElement.onerror = function() {
@@ -449,10 +468,6 @@
                 noteElement.setAttribute('data-color', noteData.color || 'yellow');
                 noteElement.style.zIndex = noteData.zIndex || highestZIndex++;
                 
-                const pin = document.createElement('div');
-                pin.className = 'pin';
-                noteElement.appendChild(pin);
-                
                 if (noteData.type === 'text') {
                     const textElement = document.createElement('div');
                     textElement.className = 'note-text';
@@ -460,6 +475,28 @@
                     noteElement.appendChild(textElement);
                 }
             }
+            
+            // Add pin container (outside the note element)
+            const pinContainer = document.createElement('div');
+            pinContainer.className = 'pin-container';
+            const pin = document.createElement('div');
+            pin.className = 'pin';
+            pinContainer.appendChild(pin);
+            
+            // Position the pin at the top center of the note
+            function positionPin() {
+                const noteRect = noteElement.getBoundingClientRect();
+                const boardRect = corkboard.getBoundingClientRect();
+                
+                pinContainer.style.left = (noteRect.left - boardRect.left + noteRect.width / 2) + 'px';
+                pinContainer.style.top = (noteRect.top - boardRect.top - 18) + 'px';
+            }
+            
+            // Add pin to the corkboard (not the note)
+            corkboard.appendChild(pinContainer);
+            
+            // Store reference to pin container in note element
+            noteElement.dataset.pinId = noteData.id + '_pin';
             
             // Add slight rotation for natural look
             const rotation = noteData.rotation || (Math.random() * 4 - 2);
@@ -475,6 +512,10 @@
                 deleteBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (confirm('Delete this note?')) {
+                        // Also remove the associated pin
+                        const pinElement = document.querySelector(`[data-pin-id="${noteData.id + '_pin'}"]`);
+                        if (pinElement) pinElement.remove();
+                        
                         db.collection("notes").doc(noteData.id).delete().catch(error => {
                             console.error("Error deleting note:", error);
                         });
@@ -488,26 +529,30 @@
                 noteElement.appendChild(resizeHandle);
                 
                 // Make resizable
-                makeResizable(noteElement, noteData.id);
+                makeResizable(noteElement, noteData.id, pinContainer);
             }
             
             // Make draggable
-            makeDraggable(noteElement, noteData.id);
+            makeDraggable(noteElement, noteData.id, pinContainer);
             
             // Bring to front on click
             noteElement.addEventListener('mousedown', function(e) {
                 if (!e.target.classList.contains('delete-btn') && 
                     !e.target.classList.contains('resize-handle')) {
-                    bringToFront(noteElement, noteData.id);
+                    bringToFront(noteElement, pinContainer, noteData.id);
                 }
             });
+            
+            // Position pin after note is added
+            setTimeout(positionPin, 10);
             
             corkboard.appendChild(noteElement);
         }
 
-        function bringToFront(element, noteId) {
+        function bringToFront(element, pinContainer, noteId) {
             highestZIndex++;
             element.style.zIndex = highestZIndex;
+            pinContainer.style.zIndex = highestZIndex + 1;
             
             // Update z-index in database
             db.collection("notes").doc(noteId).update({
@@ -519,6 +564,8 @@
 
         function updateNoteOnBoard(noteData) {
             const noteElement = document.querySelector(`[data-note-id="${noteData.id}"]`);
+            const pinContainer = document.querySelector(`[data-pin-id="${noteData.id + '_pin'}"]`);
+            
             if (noteElement) {
                 noteElement.style.left = (noteData.x || 100) + 'px';
                 noteElement.style.top = (noteData.y || 100) + 'px';
@@ -530,6 +577,7 @@
                 
                 if (noteData.zIndex) {
                     noteElement.style.zIndex = noteData.zIndex;
+                    if (pinContainer) pinContainer.style.zIndex = noteData.zIndex + 1;
                     if (noteData.zIndex > highestZIndex) {
                         highestZIndex = noteData.zIndex;
                     }
@@ -539,15 +587,27 @@
                     const textElement = noteElement.querySelector('.note-text');
                     if (textElement) textElement.textContent = noteData.content;
                 }
+                
+                // Update pin position
+                if (pinContainer) {
+                    const noteRect = noteElement.getBoundingClientRect();
+                    const boardRect = corkboard.getBoundingClientRect();
+                    
+                    pinContainer.style.left = (noteRect.left - boardRect.left + noteRect.width / 2) + 'px';
+                    pinContainer.style.top = (noteRect.top - boardRect.top - 18) + 'px';
+                }
             }
         }
 
         function removeNoteFromBoard(noteId) {
             const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
+            const pinContainer = document.querySelector(`[data-pin-id="${noteId + '_pin'}"]`);
+            
             if (noteElement) noteElement.remove();
+            if (pinContainer) pinContainer.remove();
         }
 
-        function makeDraggable(element, noteId) {
+        function makeDraggable(element, noteId, pinContainer) {
             let isDragging = false;
             let startX, startY;
             let startLeft, startTop;
@@ -566,6 +626,7 @@
                 startTop = parseInt(element.style.top);
                 
                 element.style.zIndex = highestZIndex++;
+                if (pinContainer) pinContainer.style.zIndex = highestZIndex;
                 e.preventDefault();
             });
             
@@ -581,6 +642,15 @@
                 // Allow notes to be placed anywhere on the board
                 element.style.left = newX + 'px';
                 element.style.top = newY + 'px';
+                
+                // Update pin position
+                if (pinContainer) {
+                    const noteRect = element.getBoundingClientRect();
+                    const boardRect = corkboard.getBoundingClientRect();
+                    
+                    pinContainer.style.left = (noteRect.left - boardRect.left + noteRect.width / 2) + 'px';
+                    pinContainer.style.top = (noteRect.top - boardRect.top - 18) + 'px';
+                }
             });
             
             document.addEventListener('mouseup', function() {
@@ -599,7 +669,7 @@
             });
         }
 
-        function makeResizable(element, noteId) {
+        function makeResizable(element, noteId, pinContainer) {
             let isResizing = false;
             let startX, startY;
             let startWidth, startHeight;
@@ -617,6 +687,7 @@
                 startTop = parseInt(element.style.top);
                 
                 element.style.zIndex = highestZIndex++;
+                if (pinContainer) pinContainer.style.zIndex = highestZIndex;
                 e.stopPropagation();
                 e.preventDefault();
             });
@@ -634,6 +705,15 @@
                 // Apply new size
                 element.style.width = newWidth + 'px';
                 element.style.height = newHeight + 'px';
+                
+                // Update pin position
+                if (pinContainer) {
+                    const noteRect = element.getBoundingClientRect();
+                    const boardRect = corkboard.getBoundingClientRect();
+                    
+                    pinContainer.style.left = (noteRect.left - boardRect.left + noteRect.width / 2) + 'px';
+                    pinContainer.style.top = (noteRect.top - boardRect.top - 18) + 'px';
+                }
             });
             
             document.addEventListener('mouseup', function() {
@@ -660,8 +740,8 @@
                     id: 'note_' + Date.now(),
                     type: 'text',
                     content: text,
-                    x: Math.random() * (window.innerWidth - 200),
-                    y: Math.random() * (window.innerHeight - 200),
+                    x: Math.random() * (corkboardFrame.offsetWidth - 200),
+                    y: Math.random() * (corkboardFrame.offsetHeight - 200),
                     width: 200,
                     height: 200,
                     userId: currentUser.uid,
@@ -695,8 +775,8 @@
                         id: 'note_' + Date.now(),
                         type: 'image',
                         content: e.target.result,
-                        x: Math.random() * (window.innerWidth - 200),
-                        y: Math.random() * (window.innerHeight - 200),
+                        x: Math.random() * (corkboardFrame.offsetWidth - 200),
+                        y: Math.random() * (corkboardFrame.offsetHeight - 200),
                         width: 200,
                         height: 200,
                         userId: currentUser.uid,
