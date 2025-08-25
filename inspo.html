@@ -16,9 +16,6 @@
             overflow: hidden;
             position: relative;
             cursor: default;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
         
         /* Board selection screen */
@@ -112,6 +109,16 @@
         }
         
         /* Corkboard styling */
+        .corkboard-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5000px;
+            height: 5000px;
+            overflow: auto;
+            padding: 50px;
+        }
+        
         .corkboard-frame {
             width: 98vw;
             height: 96vh;
@@ -405,6 +412,27 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        
+        #rename-board {
+            background: #4c7aaf;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        /* Scroll position indicator */
+        #scroll-position {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 102;
+        }
     </style>
 </head>
 <body>
@@ -425,6 +453,7 @@
     <div id="board-header" style="display: none;">
         <span id="current-board-name">My Board</span>
         <button id="back-to-boards">Back to Boards</button>
+        <button id="rename-board" style="display: none;">Rename Board</button>
     </div>
 
     <div class="instructions collapsed" id="instructions">
@@ -436,13 +465,18 @@
                 <li>Double-click text to edit</li>
                 <li>Click × to delete your notes</li>
                 <li>Click on any note to bring it to the front</li>
+                <li>Scroll to explore more space on the board</li>
             </ul>
         </div>
     </div>
 
-    <div class="corkboard-frame" style="display: none;">
-        <div id="corkboard">
-            <!-- Notes and images will appear here -->
+    <div id="scroll-position">X: 0, Y: 0</div>
+
+    <div class="corkboard-container" id="corkboard-container" style="display: none;">
+        <div class="corkboard-frame">
+            <div id="corkboard">
+                <!-- Notes and images will appear here -->
+            </div>
         </div>
     </div>
 
@@ -484,13 +518,16 @@
         let highestZIndex = 10;
         let currentBoardId = null;
         let currentBoardName = "";
+        let currentBoardCreator = "";
         let unsubscribeNotes = null;
+        let scrollX = 0;
+        let scrollY = 0;
 
         // DOM elements
         const corkboard = document.getElementById('corkboard');
         const loadingElement = document.getElementById('loading');
         const instructions = document.getElementById('instructions');
-        const corkboardFrame = document.querySelector('.corkboard-frame');
+        const corkboardContainer = document.getElementById('corkboard-container');
         const boardSelection = document.getElementById('board-selection');
         const boardsList = document.getElementById('boards-list');
         const createBoardBtn = document.getElementById('create-board');
@@ -500,7 +537,9 @@
         const boardHeader = document.getElementById('board-header');
         const currentBoardNameSpan = document.getElementById('current-board-name');
         const backToBoardsBtn = document.getElementById('back-to-boards');
+        const renameBoardBtn = document.getElementById('rename-board');
         const uploadContainer = document.getElementById('upload-container');
+        const scrollPositionIndicator = document.getElementById('scroll-position');
 
         // Initialize app
         initApp();
@@ -523,6 +562,7 @@
         // Board selection functionality
         createBoardBtn.addEventListener('click', function() {
             createBoardForm.style.display = 'flex';
+            createBoardBtn.style.display = 'none'; // Hide create button after clicking
         });
 
         submitNewBoardBtn.addEventListener('click', function() {
@@ -534,6 +574,20 @@
 
         backToBoardsBtn.addEventListener('click', function() {
             showBoardSelection();
+        });
+
+        renameBoardBtn.addEventListener('click', function() {
+            const newName = prompt("Enter new name for this board:", currentBoardName);
+            if (newName && newName.trim() !== "") {
+                renameBoard(currentBoardId, newName.trim());
+            }
+        });
+
+        // Track scroll position
+        corkboardContainer.addEventListener('scroll', function() {
+            scrollX = this.scrollLeft;
+            scrollY = this.scrollTop;
+            scrollPositionIndicator.textContent = `X: ${scrollX}, Y: ${scrollY}`;
         });
 
         async function initApp() {
@@ -562,16 +616,24 @@
                 boardsList.innerHTML = '';
                 if (querySnapshot.empty) {
                     boardsList.innerHTML = '<p style="color: white;">No boards yet. Create the first one!</p>';
+                    createBoardBtn.style.display = 'block'; // Show create button if no boards
                 } else {
                     querySnapshot.forEach(doc => {
                         const boardData = doc.data();
                         const boardItem = document.createElement('div');
                         boardItem.className = 'board-item';
+                        
+                        let actionsHtml = `<button class="open-board" data-id="${doc.id}">Open</button>`;
+                        
+                        // Only show delete/rename buttons for boards created by current user
+                        if (boardData.createdBy === currentUser.uid) {
+                            actionsHtml += `<button class="delete-board" data-id="${doc.id}">Delete</button>`;
+                        }
+                        
                         boardItem.innerHTML = `
                             <h3>${boardData.name}</h3>
                             <div class="board-actions">
-                                <button class="open-board" data-id="${doc.id}">Open</button>
-                                <button class="delete-board" data-id="${doc.id}">Delete</button>
+                                ${actionsHtml}
                             </div>
                         `;
                         boardsList.appendChild(boardItem);
@@ -611,11 +673,30 @@
                     console.log("Board created with ID: ", docRef.id);
                     newBoardNameInput.value = '';
                     createBoardForm.style.display = 'none';
+                    createBoardBtn.style.display = 'block'; // Show create button again
                     openBoard(docRef.id);
                 })
                 .catch(error => {
                     console.error("Error creating board: ", error);
                 });
+        }
+        
+        function renameBoard(boardId, newName) {
+            db.collection("boards").doc(boardId).update({
+                name: newName
+            })
+            .then(() => {
+                console.log("Board renamed successfully");
+                currentBoardName = newName;
+                currentBoardNameSpan.textContent = newName;
+                
+                // Update the board name in the selection list too
+                loadBoards();
+            })
+            .catch(error => {
+                console.error("Error renaming board: ", error);
+                alert("Error renaming board. Only the board creator can rename it.");
+            });
         }
         
         function deleteBoard(boardId) {
@@ -641,6 +722,7 @@
                 })
                 .catch(error => {
                     console.error("Error deleting board: ", error);
+                    alert("Error deleting board. Only the board creator can delete it.");
                 });
         }
         
@@ -651,12 +733,21 @@
             db.collection("boards").doc(boardId).get()
                 .then(doc => {
                     if (doc.exists) {
-                        currentBoardName = doc.data().name;
+                        const boardData = doc.data();
+                        currentBoardName = boardData.name;
+                        currentBoardCreator = boardData.createdBy;
                         currentBoardNameSpan.textContent = currentBoardName;
+                        
+                        // Show rename button only if current user created this board
+                        if (currentBoardCreator === currentUser.uid) {
+                            renameBoardBtn.style.display = 'block';
+                        } else {
+                            renameBoardBtn.style.display = 'none';
+                        }
                         
                         // Show the board UI
                         boardSelection.style.display = 'none';
-                        corkboardFrame.style.display = 'block';
+                        corkboardContainer.style.display = 'block';
                         boardHeader.style.display = 'flex';
                         uploadContainer.style.display = 'flex';
                         
@@ -703,10 +794,14 @@
             }
             
             // Hide board UI and show selection
-            corkboardFrame.style.display = 'none';
+            corkboardContainer.style.display = 'none';
             boardHeader.style.display = 'none';
             uploadContainer.style.display = 'none';
             boardSelection.style.display = 'flex';
+            
+            // Reset scroll position
+            corkboardContainer.scrollLeft = 0;
+            corkboardContainer.scrollTop = 0;
             
             // Reload boards
             loadBoards();
@@ -1011,8 +1106,8 @@
                     id: 'note_' + Date.now(),
                     type: 'text',
                     content: text,
-                    x: Math.random() * (corkboardFrame.offsetWidth - 200),
-                    y: Math.random() * (corkboardFrame.offsetHeight - 200),
+                    x: Math.random() * (corkboardContainer.offsetWidth - 200) + scrollX,
+                    y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                     width: 200,
                     height: 200,
                     userId: currentUser.uid,
@@ -1049,8 +1144,8 @@
                         id: 'note_' + Date.now(),
                         type: 'image',
                         content: compressedDataUrl, // Use compressed image
-                         x: Math.random() * (corkboardFrame.offsetWidth - 200),
-                        y: Math.random() * (corkboardFrame.offsetHeight - 200),
+                         x: Math.random() * (corkboardContainer.offsetWidth - 200) + scrollX,
+                        y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                         width: 200,
                         height: 200,
                         userId: currentUser.uid,
