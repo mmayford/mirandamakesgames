@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Enhanced Inspiration Corkboard</title>
+    <title>Inspiration Corkboard</title>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
@@ -563,8 +563,8 @@
         }
 
         function removeNoteFromBoard(noteId) {
-            const noteContainer = document.querySelector(`[data-note-id="${noteId}"]`);
-            if (noteContainer) noteContainer.remove();
+            // const noteContainer = document.querySelector(`[data-note-id="${noteId}"]`);
+            // if (noteContainer) noteContainer.remove();
         }
 
         function makeDraggable(element, noteId) {
