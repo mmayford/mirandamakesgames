@@ -525,11 +525,11 @@
       const toggleButton = document.querySelectorAll('.game-description-toggle')[index];
       const content = document.getElementById(games[index].descriptionContentId);
       
-      // Only expand if it's not already expanded
-      // if (!toggleButton.classList.contains('active')) {
-      //   toggleButton.classList.add('active');
-      //   content.classList.add('active');
-      // }
+      // Only close if it's not already closed
+      if (toggleButton.classList.contains('active')) {
+        toggleButton.classList.remove('active');
+        content.classList.remove('active');
+      }
     }
     
     function toggleDescription(index) {
@@ -542,8 +542,8 @@
     
     // Initialize the first description as expanded
     document.addEventListener('DOMContentLoaded', function() {
-      document.querySelector('.game-description-toggle').classList.add('active');
-      document.getElementById('game1-description-content').classList.add('active');
+      // document.querySelector('.game-description-toggle').classList.add('active');
+      // document.getElementById('game1-description-content').classList.add('active');
     });
   </script>
 </body>
