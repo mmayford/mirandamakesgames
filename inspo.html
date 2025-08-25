@@ -10,9 +10,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-image: url('Images/corkboard.png');
-            background-size: cover;
-            background-color: #8b5a2b;
+            background-color: #6d4c2b;
             font-family: 'Comic Sans MS', cursive;
             height: 100vh;
             overflow: hidden;
@@ -23,15 +21,106 @@
             align-items: center;
         }
         
+        /* Board selection screen */
+        #board-selection {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(107, 66, 38, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+        
+        #board-selection h2 {
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .boards-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 800px;
+            margin-bottom: 30px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .board-item {
+            background: #ffebcd;
+            padding: 15px;
+            border-radius: 8px;
+            width: 150px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        
+        .board-item:hover {
+            transform: translateY(-5px);
+        }
+        
+        .board-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: center;
+        }
+        
+        .board-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        #create-board {
+            background: #ffcc00;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-family: 'Comic Sans MS', cursive;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        
+        #create-board-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #ffebcd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            align-items: center;
+        }
+        
+        #new-board-name {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Comic Sans MS', cursive;
+            width: 250px;
+        }
+        
+        /* Corkboard styling */
         .corkboard-frame {
             width: 98vw;
             height: 96vh;
-            border: 12px solid #ffebf1;
+            border: 20px solid #8b4513;
             border-radius: 4px;
             box-shadow: 
-                0 0 0 4px #8b4513,
                 inset 0 0 20px rgba(0, 0, 0, 0.5),
                 0 8px 20px rgba(0, 0, 0, 0.5);
+            background-image: url('Images/corkboard.png');
             background-size: cover;
             position: relative;
             overflow: hidden;
@@ -102,8 +191,8 @@
         
         .note {
             position: relative;
-            min-width: 150px;
-            min-height: 150px;
+            min-width: 80px;
+            min-height: 80px;
             padding: 15px;
             box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
             display: flex;
@@ -137,7 +226,7 @@
         
         .note-text {
             width: 100%;
-            min-height: 100px;
+            min-height: 50px;
             background: transparent;
             border: none;
             resize: none;
@@ -292,10 +381,51 @@
             font-size: 16px;
             cursor: pointer;
         }
+        
+        /* Board header */
+        #board-header {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 101;
+        }
+        
+        #back-to-boards {
+            background: #8b4513;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <div id="board-selection">
+        <h2>Select a Corkboard</h2>
+        <div class="boards-container" id="boards-list">
+            <!-- Boards will be listed here -->
+        </div>
+        <button id="create-board">Create New Board</button>
+        <div id="create-board-form" style="display: none;">
+            <input type="text" id="new-board-name" placeholder="Board name">
+            <button id="submit-new-board">Create</button>
+        </div>
+    </div>
+
     <div class="loading" id="loading">Loading corkboard...</div>
+
+    <div id="board-header" style="display: none;">
+        <span id="current-board-name">My Board</span>
+        <button id="back-to-boards">Back to Boards</button>
+    </div>
 
     <div class="instructions collapsed" id="instructions">
         <h3>How to use <span class="toggle-instructions">+</span></h3>
@@ -310,13 +440,13 @@
         </div>
     </div>
 
-    <div class="corkboard-frame">
+    <div class="corkboard-frame" style="display: none;">
         <div id="corkboard">
             <!-- Notes and images will appear here -->
         </div>
     </div>
 
-    <div id="upload-container">
+    <div id="upload-container" style="display: none;">
         <input type="text" id="text-note" placeholder="Write your note...">
         <div class="color-picker">
             <div class="color-option active" id="yellow" data-color="yellow"></div>
@@ -352,12 +482,25 @@
         let notes = [];
         let selectedColor = 'yellow';
         let highestZIndex = 10;
+        let currentBoardId = null;
+        let currentBoardName = "";
+        let unsubscribeNotes = null;
 
         // DOM elements
         const corkboard = document.getElementById('corkboard');
         const loadingElement = document.getElementById('loading');
         const instructions = document.getElementById('instructions');
         const corkboardFrame = document.querySelector('.corkboard-frame');
+        const boardSelection = document.getElementById('board-selection');
+        const boardsList = document.getElementById('boards-list');
+        const createBoardBtn = document.getElementById('create-board');
+        const createBoardForm = document.getElementById('create-board-form');
+        const submitNewBoardBtn = document.getElementById('submit-new-board');
+        const newBoardNameInput = document.getElementById('new-board-name');
+        const boardHeader = document.getElementById('board-header');
+        const currentBoardNameSpan = document.getElementById('current-board-name');
+        const backToBoardsBtn = document.getElementById('back-to-boards');
+        const uploadContainer = document.getElementById('upload-container');
 
         // Initialize app
         initApp();
@@ -377,7 +520,23 @@
             }
         });
 
-         async function initApp() {
+        // Board selection functionality
+        createBoardBtn.addEventListener('click', function() {
+            createBoardForm.style.display = 'flex';
+        });
+
+        submitNewBoardBtn.addEventListener('click', function() {
+            const boardName = newBoardNameInput.value.trim();
+            if (boardName) {
+                createNewBoard(boardName);
+            }
+        });
+
+        backToBoardsBtn.addEventListener('click', function() {
+            showBoardSelection();
+        });
+
+        async function initApp() {
             try {
                 console.log("Initializing Firebase...");
                 
@@ -387,26 +546,8 @@
                 currentUser = auth.currentUser;
                 console.log("Signed in successfully. User ID:", currentUser.uid);
                 
-                // Load existing notes
-                loadNotes();
-                
-                // Set up real-time listener
-                db.collection("notes").onSnapshot(snapshot => {
-                    console.log("Received snapshot with", snapshot.docs.length, "notes");
-                    snapshot.docChanges().forEach(change => {
-                        if (change.type === "added") {
-                            addNoteToBoard(change.doc.data());
-                        }
-                        if (change.type === "modified") {
-                            updateNoteOnBoard(change.doc.data());
-                        }
-                        if (change.type === "removed") {
-                            removeNoteFromBoard(change.doc.id);
-                        }
-                    });
-                }, error => {
-                    console.error("Firestore listener error:", error);
-                });
+                // Load boards
+                loadBoards();
                 
                 loadingElement.style.display = 'none';
             } catch (error) {
@@ -414,6 +555,161 @@
                 console.error("Full error details:", JSON.stringify(error, null, 2));
                 loadingElement.textContent = `Error: ${error.message}`;
             }
+        }
+        
+        function loadBoards() {
+            db.collection("boards").get().then(querySnapshot => {
+                boardsList.innerHTML = '';
+                if (querySnapshot.empty) {
+                    boardsList.innerHTML = '<p style="color: white;">No boards yet. Create the first one!</p>';
+                } else {
+                    querySnapshot.forEach(doc => {
+                        const boardData = doc.data();
+                        const boardItem = document.createElement('div');
+                        boardItem.className = 'board-item';
+                        boardItem.innerHTML = `
+                            <h3>${boardData.name}</h3>
+                            <div class="board-actions">
+                                <button class="open-board" data-id="${doc.id}">Open</button>
+                                <button class="delete-board" data-id="${doc.id}">Delete</button>
+                            </div>
+                        `;
+                        boardsList.appendChild(boardItem);
+                    });
+                    
+                    // Add event listeners
+                    document.querySelectorAll('.open-board').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const boardId = this.getAttribute('data-id');
+                            openBoard(boardId);
+                        });
+                    });
+                    
+                    document.querySelectorAll('.delete-board').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const boardId = this.getAttribute('data-id');
+                            if (confirm('Are you sure you want to delete this board?')) {
+                                deleteBoard(boardId);
+                            }
+                        });
+                    });
+                }
+            }).catch(error => {
+                console.error("Error loading boards:", error);
+            });
+        }
+        
+        function createNewBoard(name) {
+            const newBoard = {
+                name: name,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.uid
+            };
+            
+            db.collection("boards").add(newBoard)
+                .then((docRef) => {
+                    console.log("Board created with ID: ", docRef.id);
+                    newBoardNameInput.value = '';
+                    createBoardForm.style.display = 'none';
+                    openBoard(docRef.id);
+                })
+                .catch(error => {
+                    console.error("Error creating board: ", error);
+                });
+        }
+        
+        function deleteBoard(boardId) {
+            // First delete all notes in this board
+            db.collection("notes")
+                .where("boardId", "==", boardId)
+                .get()
+                .then(querySnapshot => {
+                    const deletePromises = [];
+                    querySnapshot.forEach(doc => {
+                        deletePromises.push(doc.ref.delete());
+                    });
+                    
+                    return Promise.all(deletePromises);
+                })
+                .then(() => {
+                    // Then delete the board itself
+                    return db.collection("boards").doc(boardId).delete();
+                })
+                .then(() => {
+                    console.log("Board deleted successfully");
+                    loadBoards();
+                })
+                .catch(error => {
+                    console.error("Error deleting board: ", error);
+                });
+        }
+        
+        function openBoard(boardId) {
+            currentBoardId = boardId;
+            
+            // Get board name
+            db.collection("boards").doc(boardId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        currentBoardName = doc.data().name;
+                        currentBoardNameSpan.textContent = currentBoardName;
+                        
+                        // Show the board UI
+                        boardSelection.style.display = 'none';
+                        corkboardFrame.style.display = 'block';
+                        boardHeader.style.display = 'flex';
+                        uploadContainer.style.display = 'flex';
+                        
+                        // Clear existing notes
+                        corkboard.innerHTML = '';
+                        
+                        // Set up real-time listener for this board's notes
+                        if (unsubscribeNotes) {
+                            unsubscribeNotes(); // Remove previous listener if any
+                        }
+                        
+                        unsubscribeNotes = db.collection("notes")
+                            .where("boardId", "==", boardId)
+                            .onSnapshot(snapshot => {
+                                console.log("Received snapshot with", snapshot.docs.length, "notes");
+                                snapshot.docChanges().forEach(change => {
+                                    if (change.type === "added") {
+                                        addNoteToBoard(change.doc.data());
+                                    }
+                                    if (change.type === "modified") {
+                                        updateNoteOnBoard(change.doc.data());
+                                    }
+                                    if (change.type === "removed") {
+                                        removeNoteFromBoard(change.doc.id);
+                                    }
+                                });
+                            }, error => {
+                                console.error("Firestore listener error:", error);
+                            });
+                    } else {
+                        console.error("Board not found");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error getting board: ", error);
+                });
+        }
+        
+        function showBoardSelection() {
+            // Unsubscribe from notes listener
+            if (unsubscribeNotes) {
+                unsubscribeNotes();
+                unsubscribeNotes = null;
+            }
+            
+            // Hide board UI and show selection
+            corkboardFrame.style.display = 'none';
+            boardHeader.style.display = 'none';
+            uploadContainer.style.display = 'none';
+            boardSelection.style.display = 'flex';
+            
+            // Reload boards
+            loadBoards();
         }
         
         // Add this function to compress images
@@ -455,16 +751,6 @@
             });
         }
         
-        function loadNotes() {
-            db.collection("notes").get().then(querySnapshot => {
-                querySnapshot.forEach(doc => {
-                    addNoteToBoard(doc.data());
-                });
-            }).catch(error => {
-                console.error("Error loading notes:", error);
-            });
-        }
-
         function addNoteToBoard(noteData) {
             // Check if note already exists
             if (document.querySelector(`[data-note-id="${noteData.id}"]`)) return;
@@ -540,15 +826,15 @@
                     }
                 });
                 noteElement.appendChild(deleteBtn);
-                
-                // Add resize handle for user's own notes
-                const resizeHandle = document.createElement('div');
-                resizeHandle.className = 'resize-handle';
-                noteElement.appendChild(resizeHandle);
-                
-                // Make resizable
-                makeResizable(noteContainer, noteData.id);
             }
+            
+            // Add resize handle for ALL notes (everyone can resize)
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            noteElement.appendChild(resizeHandle);
+            
+            // Make resizable
+            makeResizable(noteContainer, noteData.id);
             
             // Make draggable
             makeDraggable(noteContainer, noteData.id);
@@ -692,9 +978,9 @@
                 const dx = e.clientX - startX;
                 const dy = e.clientY - startY;
                 
-                // Calculate new dimensions with minimum size constraints
-                const newWidth = Math.max(150, startWidth + dx);
-                const newHeight = Math.max(150, startHeight + dy);
+                // Calculate new dimensions with smaller minimum size constraints
+                const newWidth = Math.max(80, startWidth + dx);
+                const newHeight = Math.max(80, startHeight + dy);
                 
                 // Apply new size
                 element.style.width = newWidth + 'px';
@@ -730,6 +1016,7 @@
                     width: 200,
                     height: 200,
                     userId: currentUser.uid,
+                    boardId: currentBoardId,
                     color: selectedColor,
                     rotation: Math.random() * 4 - 2,
                     zIndex: highestZIndex++,
@@ -767,6 +1054,7 @@
                         width: 200,
                         height: 200,
                         userId: currentUser.uid,
+                        boardId: currentBoardId,
                         rotation: Math.random() * 4 - 2,
                         zIndex: highestZIndex++,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
