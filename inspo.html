@@ -11,11 +11,12 @@
         body {
             margin: 0;
             padding: 0;
-            background-image: url('../Images/corkboard.jpg');
+            background-image: url('https://raw.githubusercontent.com/ivangarcia7/creative-board/main/Images/corkboard.jpg');
             background-size: cover;
             font-family: 'Comic Sans MS', cursive;
             height: 100vh;
             overflow: hidden;
+            position: relative;
         }
         .loading {
             position: fixed;
@@ -26,8 +27,179 @@
             padding: 20px;
             border-radius: 10px;
             z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        /* Add your other styles here */
+        
+        #upload-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+        
+        #text-note {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: 'Comic Sans MS', cursive;
+            width: 200px;
+        }
+        
+        button {
+            padding: 8px 12px;
+            background: #ffcc00;
+            border: none;
+            border-radius: 4px;
+            font-family: 'Comic Sans MS', cursive;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #ffdb4d;
+            transform: translateY(-2px);
+        }
+        
+        #corkboard {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 100px);
+            overflow: hidden;
+        }
+        
+        .note {
+            position: absolute;
+            min-width: 150px;
+            min-height: 150px;
+            padding: 15px;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: box-shadow 0.3s;
+            z-index: 10;
+        }
+        
+        .note.mine {
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .note:hover {
+            z-index: 20;
+        }
+        
+        .pin {
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle at 30% 30%, #ffcc00, #cc0000 70%);
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            margin-bottom: 5px;
+            position: relative;
+        }
+        
+        .pin::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            height: 15px;
+            background: linear-gradient(to bottom, #999, #666);
+            top: 18px;
+            left: 9px;
+            border-radius: 0 0 1px 1px;
+        }
+        
+        .note-text {
+            width: 100%;
+            min-height: 100px;
+            background: transparent;
+            border: none;
+            resize: none;
+            font-family: 'Comic Sans MS', cursive;
+            font-size: 16px;
+            outline: none;
+            flex-grow: 1;
+            margin-top: 5px;
+            padding: 5px;
+            overflow-wrap: break-word;
+        }
+        
+        .note img {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 5px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.7);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 30;
+        }
+        
+        .note:hover .delete-btn {
+            opacity: 1;
+        }
+        
+        /* Sticky note colors */
+        .note[data-color="yellow"] { background: linear-gradient(135deg, #fffc7f 0%, #fdfb90 100%); }
+        .note[data-color="pink"] { background: linear-gradient(135deg, #ff9ee0 0%, #fdcdea 100%); }
+        .note[data-color="blue"] { background: linear-gradient(135deg, #a2d2ff 0%, #c6e2ff 100%); }
+        .note[data-color="green"] { background: linear-gradient(135deg, #b0f2b6 0%, #caf7ce 100%); }
+        .note[data-color="purple"] { background: linear-gradient(135deg, #d9b0ff 0%, #e6ceff 100%); }
+        
+        /* Rotation for more natural look */
+        .note {
+            transform: rotate(calc(-2deg + 4deg * random()));
+        }
+        
+        /* Color picker */
+        .color-picker {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        
+        .color-option {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .color-option.active {
+            border-color: #333;
+        }
+        
+        #yellow { background: #fffc7f; }
+        #pink { background: #ff9ee0; }
+        #blue { background: #a2d2ff; }
+        #green { background: #b0f2b6; }
+        #purple { background: #d9b0ff; }
     </style>
 </head>
 <body>
@@ -35,7 +207,14 @@
 
     <div id="upload-container">
         <input type="text" id="text-note" placeholder="Write your note...">
-        <input type="file" id="image-upload" accept="image/*">
+        <div class="color-picker">
+            <div class="color-option active" id="yellow" data-color="yellow"></div>
+            <div class="color-option" id="pink" data-color="pink"></div>
+            <div class="color-option" id="blue" data-color="blue"></div>
+            <div class="color-option" id="green" data-color="green"></div>
+            <div class="color-option" id="purple" data-color="purple"></div>
+        </div>
+        <input type="file" id="image-upload" accept="image/*" style="display: none;">
         <button id="add-text">Add Text Note</button>
         <button id="add-image">Add Image</button>
     </div>
@@ -64,6 +243,7 @@
         // User and notes variables
         let currentUser = null;
         let notes = [];
+        let selectedColor = 'yellow';
 
         // DOM elements
         const corkboard = document.getElementById('corkboard');
@@ -72,46 +252,46 @@
         // Initialize app
         initApp();
 
-async function initApp() {
-    try {
-        console.log("Initializing Firebase...");
-        
-        // Test Firestore connection
-        const testDoc = await db.collection("test").doc("test").get();
-        console.log("Firestore test successful", testDoc);
-        
-        // Sign in anonymously
-        console.log("Attempting anonymous sign-in...");
-        const cred = await auth.signInAnonymously();
-        currentUser = auth.currentUser;
-        console.log("Signed in successfully. User ID:", currentUser.uid);
-        
-        // Load existing notes
-        loadNotes();
-        
-        // Set up real-time listener
-        db.collection("notes").onSnapshot(snapshot => {
-            console.log("Received snapshot with", snapshot.docs.length, "notes");
-            snapshot.docChanges().forEach(change => {
-                if (change.type === "added") {
-                    addNoteToBoard(change.doc.data());
-                }
-                if (change.type === "modified") {
-                    updateNoteOnBoard(change.doc.data());
-                }
-                if (change.type === "removed") {
-                    removeNoteFromBoard(change.doc.id);
-                }
-            });
-        });
-        
-        loadingElement.style.display = 'none';
-    } catch (error) {
-        console.error("Initialization error:", error);
-        console.error("Full error details:", JSON.stringify(error, null, 2));
-        loadingElement.textContent = `Error: ${error.message}`;
-    }
-}
+        async function initApp() {
+            try {
+                console.log("Initializing Firebase...");
+                
+                // Test Firestore connection
+                const testDoc = await db.collection("test").doc("test").get();
+                console.log("Firestore test successful", testDoc);
+                
+                // Sign in anonymously
+                console.log("Attempting anonymous sign-in...");
+                const cred = await auth.signInAnonymously();
+                currentUser = auth.currentUser;
+                console.log("Signed in successfully. User ID:", currentUser.uid);
+                
+                // Load existing notes
+                loadNotes();
+                
+                // Set up real-time listener
+                db.collection("notes").onSnapshot(snapshot => {
+                    console.log("Received snapshot with", snapshot.docs.length, "notes");
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === "added") {
+                            addNoteToBoard(change.doc.data());
+                        }
+                        if (change.type === "modified") {
+                            updateNoteOnBoard(change.doc.data());
+                        }
+                        if (change.type === "removed") {
+                            removeNoteFromBoard(change.doc.id);
+                        }
+                    });
+                });
+                
+                loadingElement.style.display = 'none';
+            } catch (error) {
+                console.error("Initialization error:", error);
+                console.error("Full error details:", JSON.stringify(error, null, 2));
+                loadingElement.textContent = `Error: ${error.message}`;
+            }
+        }
         
         function loadNotes() {
             db.collection("notes").get().then(querySnapshot => {
@@ -130,6 +310,11 @@ async function initApp() {
             noteElement.style.left = noteData.x + 'px';
             noteElement.style.top = noteData.y + 'px';
             noteElement.dataset.noteId = noteData.id;
+            noteElement.setAttribute('data-color', noteData.color || 'yellow');
+            
+            // Add slight rotation for natural look
+            const rotation = noteData.rotation || (Math.random() * 4 - 2);
+            noteElement.style.transform = `rotate(${rotation}deg)`;
             
             if (noteData.userId === currentUser.uid) {
                 noteElement.classList.add('mine');
@@ -191,11 +376,20 @@ async function initApp() {
         function makeDraggable(element, noteId) {
             let isDragging = false;
             let startX, startY;
+            let startLeft, startTop;
             
             element.addEventListener('mousedown', function(e) {
+                // Don't start drag if clicking on delete button
+                if (e.target.classList.contains('delete-btn')) return;
+                
                 isDragging = true;
                 startX = e.clientX;
                 startY = e.clientY;
+                
+                // Get current position
+                startLeft = parseInt(element.style.left);
+                startTop = parseInt(element.style.top);
+                
                 element.style.zIndex = 100;
                 e.preventDefault();
             });
@@ -206,14 +400,15 @@ async function initApp() {
                 const dx = e.clientX - startX;
                 const dy = e.clientY - startY;
                 
-                const newX = parseInt(element.style.left || 0) + dx;
-                const newY = parseInt(element.style.top || 0) + dy;
+                const newX = startLeft + dx;
+                const newY = startTop + dy;
                 
-                element.style.left = newX + 'px';
-                element.style.top = newY + 'px';
+                // Keep within bounds
+                const maxX = window.innerWidth - element.offsetWidth;
+                const maxY = window.innerHeight - element.offsetHeight;
                 
-                startX = e.clientX;
-                startY = e.clientY;
+                element.style.left = Math.max(0, Math.min(maxX, newX)) + 'px';
+                element.style.top = Math.max(0, Math.min(maxY, newY)) + 'px';
             });
             
             document.addEventListener('mouseup', function() {
@@ -241,6 +436,8 @@ async function initApp() {
                     x: Math.random() * (window.innerWidth - 200),
                     y: Math.random() * (window.innerHeight - 200),
                     userId: currentUser.uid,
+                    color: selectedColor,
+                    rotation: Math.random() * 4 - 2, // Random rotation between -2 and 2 degrees
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
@@ -251,8 +448,11 @@ async function initApp() {
 
         // Add image note
         document.getElementById('add-image').addEventListener('click', function() {
-            const fileInput = document.getElementById('image-upload');
-            if (fileInput.files && fileInput.files[0]) {
+            document.getElementById('image-upload').click();
+        });
+        
+        document.getElementById('image-upload').addEventListener('change', function() {
+            if (this.files && this.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const newNote = {
@@ -262,12 +462,15 @@ async function initApp() {
                         x: Math.random() * (window.innerWidth - 200),
                         y: Math.random() * (window.innerHeight - 200),
                         userId: currentUser.uid,
+                        color: selectedColor,
+                        rotation: Math.random() * 4 - 2,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     
                     db.collection("notes").doc(newNote.id).set(newNote);
                 };
-                reader.readAsDataURL(fileInput.files[0]);
+                reader.readAsDataURL(this.files[0]);
+                this.value = ''; // Reset file input
             }
         });
 
@@ -278,14 +481,28 @@ async function initApp() {
                 const noteElement = textElement.closest('.note');
                 const noteId = noteElement.dataset.noteId;
                 const currentText = textElement.textContent;
-                const newText = prompt('Edit your note:', currentText);
                 
-                if (newText !== null && noteElement.classList.contains('mine')) {
-                    db.collection("notes").doc(noteId).update({
-                        content: newText
-                    });
+                if (noteElement.classList.contains('mine')) {
+                    const newText = prompt('Edit your note:', currentText);
+                    
+                    if (newText !== null) {
+                        db.collection("notes").doc(noteId).update({
+                            content: newText
+                        });
+                    }
                 }
             }
+        });
+        
+        // Color selection
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.color-option').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+                this.classList.add('active');
+                selectedColor = this.getAttribute('data-color');
+            });
         });
     </script>
 </body>
