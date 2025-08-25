@@ -99,25 +99,14 @@
         }
         
         .pin {
-            width: 20px;
-            height: 20px;
-            background: radial-gradient(circle at 30% 30%, #ffcc00, #cc0000 70%);
-            border-radius: 50%;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            width: 24px;
+            height: 24px;
+            background-image: url('Images/thumbtack.png');
+            background-size: contain;
+            background-repeat: no-repeat;
             margin-bottom: 5px;
             position: relative;
             cursor: move;
-        }
-        
-        .pin::after {
-            content: '';
-            position: absolute;
-            width: 2px;
-            height: 15px;
-            background: linear-gradient(to bottom, #999, #666);
-            top: 18px;
-            left: 9px;
-            border-radius: 0 0 1px 1px;
         }
         
         .note-text {
@@ -141,16 +130,14 @@
             max-width: 100%;
             max-height: 200px;
             margin-top: 5px;
-            border: 1px solid rgba(0,0,0,0.1);
             object-fit: contain;
         }
         
         .pinned-image {
             position: absolute;
             box-shadow: 3px 3px 15px rgba(0, 0, 0, 0.4);
-            border: 8px solid #f0f0f0;
-            background: #f0f0f0;
             overflow: hidden;
+            background: transparent;
         }
         
         .pinned-image img {
@@ -161,7 +148,7 @@
         
         .pinned-image .pin {
             position: absolute;
-            top: -10px;
+            top: -12px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 15;
@@ -258,20 +245,54 @@
             max-width: 200px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             z-index: 101;
+            transition: all 0.3s ease;
+            overflow: hidden;
+            max-height: 20px;
+        }
+        
+        .instructions.collapsed {
+            max-height: 20px;
+            cursor: pointer;
+        }
+        
+        .instructions.expanded {
+            max-height: 200px;
+            cursor: default;
+        }
+        
+        .instructions h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .instructions ul {
+            margin: 0;
+            padding-left: 15px;
+        }
+        
+        .toggle-instructions {
+            font-size: 16px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <div class="loading" id="loading">Loading corkboard...</div>
 
-    <div class="instructions">
-        <strong>How to use:</strong>
-        <ul>
-            <li>Drag notes/images to move</li>
-            <li>Use resize handle (bottom-right) to resize</li>
-            <li>Double-click text to edit</li>
-            <li>Click × to delete your notes</li>
-        </ul>
+    <div class="instructions collapsed" id="instructions">
+        <h3>How to use <span class="toggle-instructions">+</span></h3>
+        <div class="content">
+            <ul>
+                <li>Drag notes/images to move</li>
+                <li>Use resize handle (bottom-right) to resize</li>
+                <li>Double-click text to edit</li>
+                <li>Click × to delete your notes</li>
+                <li>Click on any note to bring it to the front</li>
+            </ul>
+        </div>
     </div>
 
     <div id="upload-container">
@@ -313,13 +334,30 @@
         let currentUser = null;
         let notes = [];
         let selectedColor = 'yellow';
+        let highestZIndex = 10;
 
         // DOM elements
         const corkboard = document.getElementById('corkboard');
         const loadingElement = document.getElementById('loading');
+        const instructions = document.getElementById('instructions');
 
         // Initialize app
         initApp();
+
+        // Toggle instructions
+        instructions.addEventListener('click', function(e) {
+            if (e.target.classList.contains('toggle-instructions') || e.target.tagName === 'H3') {
+                if (instructions.classList.contains('collapsed')) {
+                    instructions.classList.remove('collapsed');
+                    instructions.classList.add('expanded');
+                    document.querySelector('.toggle-instructions').textContent = '-';
+                } else {
+                    instructions.classList.remove('expanded');
+                    instructions.classList.add('collapsed');
+                    document.querySelector('.toggle-instructions').textContent = '+';
+                }
+            }
+        });
 
         async function initApp() {
             try {
@@ -385,6 +423,7 @@
                 noteElement.style.width = (noteData.width || 200) + 'px';
                 noteElement.style.height = (noteData.height || 200) + 'px';
                 noteElement.dataset.noteId = noteData.id;
+                noteElement.style.zIndex = noteData.zIndex || highestZIndex++;
                 
                 const pin = document.createElement('div');
                 pin.className = 'pin';
@@ -408,6 +447,7 @@
                 noteElement.style.height = (noteData.height || 200) + 'px';
                 noteElement.dataset.noteId = noteData.id;
                 noteElement.setAttribute('data-color', noteData.color || 'yellow');
+                noteElement.style.zIndex = noteData.zIndex || highestZIndex++;
                 
                 const pin = document.createElement('div');
                 pin.className = 'pin';
@@ -454,7 +494,27 @@
             // Make draggable
             makeDraggable(noteElement, noteData.id);
             
+            // Bring to front on click
+            noteElement.addEventListener('mousedown', function(e) {
+                if (!e.target.classList.contains('delete-btn') && 
+                    !e.target.classList.contains('resize-handle')) {
+                    bringToFront(noteElement, noteData.id);
+                }
+            });
+            
             corkboard.appendChild(noteElement);
+        }
+
+        function bringToFront(element, noteId) {
+            highestZIndex++;
+            element.style.zIndex = highestZIndex;
+            
+            // Update z-index in database
+            db.collection("notes").doc(noteId).update({
+                zIndex: highestZIndex
+            }).catch(error => {
+                console.error("Error updating z-index:", error);
+            });
         }
 
         function updateNoteOnBoard(noteData) {
@@ -466,6 +526,13 @@
                 if (noteData.width && noteData.height) {
                     noteElement.style.width = noteData.width + 'px';
                     noteElement.style.height = noteData.height + 'px';
+                }
+                
+                if (noteData.zIndex) {
+                    noteElement.style.zIndex = noteData.zIndex;
+                    if (noteData.zIndex > highestZIndex) {
+                        highestZIndex = noteData.zIndex;
+                    }
                 }
                 
                 if (noteData.type === 'text') {
@@ -498,7 +565,7 @@
                 startLeft = parseInt(element.style.left);
                 startTop = parseInt(element.style.top);
                 
-                element.style.zIndex = 100;
+                element.style.zIndex = highestZIndex++;
                 e.preventDefault();
             });
             
@@ -511,23 +578,20 @@
                 const newX = startLeft + dx;
                 const newY = startTop + dy;
                 
-                // Keep within bounds (allowing notes to go behind the input area)
-                const maxX = window.innerWidth - element.offsetWidth;
-                const maxY = window.innerHeight;
-                
-                element.style.left = Math.max(0, Math.min(maxX, newX)) + 'px';
-                element.style.top = Math.max(0, Math.min(maxY, newY)) + 'px';
+                // Allow notes to be placed anywhere on the board
+                element.style.left = newX + 'px';
+                element.style.top = newY + 'px';
             });
             
             document.addEventListener('mouseup', function() {
                 if (isDragging) {
                     isDragging = false;
-                    element.style.zIndex = 10;
                     
                     // Update position in database
                     db.collection("notes").doc(noteId).update({
                         x: parseInt(element.style.left),
-                        y: parseInt(element.style.top)
+                        y: parseInt(element.style.top),
+                        zIndex: parseInt(element.style.zIndex)
                     }).catch(error => {
                         console.error("Error updating note position:", error);
                     });
@@ -552,7 +616,7 @@
                 startLeft = parseInt(element.style.left);
                 startTop = parseInt(element.style.top);
                 
-                element.style.zIndex = 100;
+                element.style.zIndex = highestZIndex++;
                 e.stopPropagation();
                 e.preventDefault();
             });
@@ -575,12 +639,12 @@
             document.addEventListener('mouseup', function() {
                 if (isResizing) {
                     isResizing = false;
-                    element.style.zIndex = 10;
                     
                     // Update size in database
                     db.collection("notes").doc(noteId).update({
                         width: parseInt(element.style.width),
-                        height: parseInt(element.style.height)
+                        height: parseInt(element.style.height),
+                        zIndex: parseInt(element.style.zIndex)
                     }).catch(error => {
                         console.error("Error updating note size:", error);
                     });
@@ -603,6 +667,7 @@
                     userId: currentUser.uid,
                     color: selectedColor,
                     rotation: Math.random() * 4 - 2,
+                    zIndex: highestZIndex++,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
@@ -636,6 +701,7 @@
                         height: 200,
                         userId: currentUser.uid,
                         rotation: Math.random() * 4 - 2,
+                        zIndex: highestZIndex++,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     
