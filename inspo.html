@@ -563,8 +563,8 @@
         }
 
         function removeNoteFromBoard(noteId) {
-            // const noteContainer = document.querySelector(`[data-note-id="${noteId}"]`);
-            // if (noteContainer) noteContainer.remove();
+            const noteContainer = document.querySelector(`[data-note-id="${noteId}"]`);
+            if (noteContainer) noteContainer.remove();
         }
 
         function makeDraggable(element, noteId) {
