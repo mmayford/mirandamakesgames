@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shared Inspiration Board</title>
+    <!-- Using Firebase compat version (works with traditional script tags) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url('corkboard.jpg');
+            background-size: cover;
+            font-family: 'Comic Sans MS', cursive;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 1000;
+        }
+        /* Add your other styles here */
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">Loading corkboard...</div>
+
+    <div id="upload-container">
+        <input type="text" id="text-note" placeholder="Write your note...">
+        <input type="file" id="image-upload" accept="image/*">
+        <button id="add-text">Add Text Note</button>
+        <button id="add-image">Add Image</button>
+    </div>
+
+    <div id="corkboard">
+        <!-- Notes will appear here -->
+    </div>
+
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyB4izdi6kTnyr2OwYyM9hr69wwVqiVrZl8",
+            authDomain: "inspocorkboard.firebaseapp.com",
+            projectId: "inspocorkboard",
+            storageBucket: "inspocorkboard.firebasestorage.app",
+            messagingSenderId: "1055098716394",
+            appId: "1:1055098716394:web:bd01f225db45d42f405793",
+            measurementId: "G-EN7B83205B"
+        };
+
+        // Initialize Firebase (using compat version)
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // User and notes variables
+        let currentUser = null;
+        let notes = [];
+
+        // DOM elements
+        const corkboard = document.getElementById('corkboard');
+        const loadingElement = document.getElementById('loading');
+
+        // Initialize app
+        initApp();
+
+async function initApp() {
+    try {
+        console.log("Initializing Firebase...");
+        
+        // Test Firestore connection
+        const testDoc = await db.collection("test").doc("test").get();
+        console.log("Firestore test successful", testDoc);
+        
+        // Sign in anonymously
+        console.log("Attempting anonymous sign-in...");
+        const cred = await auth.signInAnonymously();
+        currentUser = auth.currentUser;
+        console.log("Signed in successfully. User ID:", currentUser.uid);
+        
+        // Load existing notes
+        loadNotes();
+        
+        // Set up real-time listener
+        db.collection("notes").onSnapshot(snapshot => {
+            console.log("Received snapshot with", snapshot.docs.length, "notes");
+            snapshot.docChanges().forEach(change => {
+                if (change.type === "added") {
+                    addNoteToBoard(change.doc.data());
+                }
+                if (change.type === "modified") {
+                    updateNoteOnBoard(change.doc.data());
+                }
+                if (change.type === "removed") {
+                    removeNoteFromBoard(change.doc.id);
+                }
+            });
+        });
+        
+        loadingElement.style.display = 'none';
+    } catch (error) {
+        console.error("Initialization error:", error);
+        console.error("Full error details:", JSON.stringify(error, null, 2));
+        loadingElement.textContent = `Error: ${error.message}`;
+    }
+}
+        
+        function loadNotes() {
+            db.collection("notes").get().then(querySnapshot => {
+                querySnapshot.forEach(doc => {
+                    addNoteToBoard(doc.data());
+                });
+            });
+        }
+
+        function addNoteToBoard(noteData) {
+            // Check if note already exists
+            if (document.querySelector(`[data-note-id="${noteData.id}"]`)) return;
+            
+            const noteElement = document.createElement('div');
+            noteElement.className = 'note';
+            noteElement.style.left = noteData.x + 'px';
+            noteElement.style.top = noteData.y + 'px';
+            noteElement.dataset.noteId = noteData.id;
+            
+            if (noteData.userId === currentUser.uid) {
+                noteElement.classList.add('mine');
+            }
+            
+            const pin = document.createElement('div');
+            pin.className = 'pin';
+            noteElement.appendChild(pin);
+            
+            if (noteData.type === 'text') {
+                const textElement = document.createElement('div');
+                textElement.className = 'note-text';
+                textElement.textContent = noteData.content;
+                noteElement.appendChild(textElement);
+            } else if (noteData.type === 'image') {
+                const imgElement = document.createElement('img');
+                imgElement.src = noteData.content;
+                noteElement.appendChild(imgElement);
+            }
+            
+            // Add delete button for user's own notes
+            if (noteData.userId === currentUser.uid) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    if (confirm('Delete this note?')) {
+                        db.collection("notes").doc(noteData.id).delete();
+                    }
+                });
+                noteElement.appendChild(deleteBtn);
+            }
+            
+            // Make draggable
+            makeDraggable(noteElement, noteData.id);
+            
+            corkboard.appendChild(noteElement);
+        }
+
+        function updateNoteOnBoard(noteData) {
+            const noteElement = document.querySelector(`[data-note-id="${noteData.id}"]`);
+            if (noteElement) {
+                noteElement.style.left = noteData.x + 'px';
+                noteElement.style.top = noteData.y + 'px';
+                
+                if (noteData.type === 'text') {
+                    const textElement = noteElement.querySelector('.note-text');
+                    if (textElement) textElement.textContent = noteData.content;
+                }
+            }
+        }
+
+        function removeNoteFromBoard(noteId) {
+            const noteElement = document.querySelector(`[data-note-id="${noteId}"]`);
+            if (noteElement) noteElement.remove();
+        }
+
+        function makeDraggable(element, noteId) {
+            let isDragging = false;
+            let startX, startY;
+            
+            element.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                element.style.zIndex = 100;
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                const newX = parseInt(element.style.left || 0) + dx;
+                const newY = parseInt(element.style.top || 0) + dy;
+                
+                element.style.left = newX + 'px';
+                element.style.top = newY + 'px';
+                
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    element.style.zIndex = 10;
+                    
+                    // Update position in database
+                    db.collection("notes").doc(noteId).update({
+                        x: parseInt(element.style.left),
+                        y: parseInt(element.style.top)
+                    });
+                }
+            });
+        }
+
+        // Add text note
+        document.getElementById('add-text').addEventListener('click', function() {
+            const text = document.getElementById('text-note').value;
+            if (text.trim()) {
+                const newNote = {
+                    id: 'note_' + Date.now(),
+                    type: 'text',
+                    content: text,
+                    x: Math.random() * (window.innerWidth - 200),
+                    y: Math.random() * (window.innerHeight - 200),
+                    userId: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                db.collection("notes").doc(newNote.id).set(newNote);
+                document.getElementById('text-note').value = '';
+            }
+        });
+
+        // Add image note
+        document.getElementById('add-image').addEventListener('click', function() {
+            const fileInput = document.getElementById('image-upload');
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const newNote = {
+                        id: 'note_' + Date.now(),
+                        type: 'image',
+                        content: e.target.result,
+                        x: Math.random() * (window.innerWidth - 200),
+                        y: Math.random() * (window.innerHeight - 200),
+                        userId: currentUser.uid,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    
+                    db.collection("notes").doc(newNote.id).set(newNote);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            }
+        });
+
+        // Double-click to edit text notes
+        document.addEventListener('dblclick', function(e) {
+            if (e.target.classList.contains('note-text')) {
+                const textElement = e.target;
+                const noteElement = textElement.closest('.note');
+                const noteId = noteElement.dataset.noteId;
+                const currentText = textElement.textContent;
+                const newText = prompt('Edit your note:', currentText);
+                
+                if (newText !== null && noteElement.classList.contains('mine')) {
+                    db.collection("notes").doc(noteId).update({
+                        content: newText
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>
