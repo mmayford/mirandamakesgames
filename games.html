@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
   <title>Miranda's Super Awesome Website</title>
@@ -413,8 +412,8 @@
     <!-- Moved descriptions outside games-section -->
     <div class="game-description-container">
       <!-- Only one description will be visible at a time -->
-      <div id="game1-description" class="game-description-content">
-        <button class="game-description-toggle" onclick="toggleDescription(0)">Elizabeth Warren Belly Dancing Info - Click to expand/collapse</button>
+      <div id="game1-description" class="game-description active">
+        <button class="game-description-toggle active" onclick="toggleDescription(0)">Elizabeth Warren Belly Dancing Info - Click to expand/collapse</button>
         <div id="game1-description-content" class="game-description-content active">
           <h2>GMTK Game Jam 2025</h2>
           <h3>Theme: Loop</h3>
@@ -527,10 +526,10 @@
       const content = document.getElementById(games[index].descriptionContentId);
       
       // Only expand if it's not already expanded
-      if (!toggleButton.classList.contains('active')) {
-        toggleButton.classList.add('active');
-        content.classList.add('active');
-      }
+      // if (!toggleButton.classList.contains('active')) {
+      //   toggleButton.classList.add('active');
+      //   content.classList.add('active');
+      // }
     }
     
     function toggleDescription(index) {
@@ -543,8 +542,8 @@
     
     // Initialize the first description as expanded
     document.addEventListener('DOMContentLoaded', function() {
-      //document.querySelector('.game-description-toggle').classList.add('active');
-      //document.getElementById('game1-description-content').classList.add('active');
+      document.querySelector('.game-description-toggle').classList.add('active');
+      document.getElementById('game1-description-content').classList.add('active');
     });
   </script>
 </body>
