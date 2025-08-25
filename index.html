@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Miranda Makes Games</title>
+    <style>
+        body {
+            background-color: #fff5f5;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+            padding: 8px;
+            background: #fff5f5;
+            border-bottom: 2px solid #ff85c0;
+        }
+
+        .tab-button {
+            padding: 8px 15px;
+            background: #ffccf9;
+            border: 2px solid #ff85c0;
+            border-radius: 10px 10px 0 0;
+            cursor: pointer;
+            font-weight: bold;
+            color: #8a2be2;
+            transition: all 0.3s;
+            flex-grow: 1;
+            text-align: center;
+            max-width: 200px;
+        }
+
+        .tab-button:hover {
+            background: #ff85c0;
+            color: white;
+        }
+
+        .tab-button.active {
+            background: #ff85c0;
+            color: white;
+            border-bottom: 2px solid #ff85c0;
+        }
+
+        .tab-content {
+            width: 100%;
+            height: calc(100vh - 50px); /* Full height minus tab bar */
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+        }
+
+        @media (max-width: 600px) {
+            .tab-buttons {
+                flex-wrap: wrap;
+            }
+            .tab-button {
+                max-width: none;
+                border-radius: 10px;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Tabs Section -->
+    <div class="tab-buttons">
+        <button class="tab-button active" onclick="openTab('home')">Home</button>
+        <button class="tab-button" onclick="openTab('inspo')">Inspo</button>
+        <button class="tab-button" onclick="openTab('guestbook')">Guestbook</button>
+    </div>
+    
+    <div class="tab-content">
+        <iframe id="tab-frame" src="home.html"></iframe>
+    </div>
+
+    <script>
+        function openTab(tabName) {
+            document.getElementById('tab-frame').src = tabName + '.html';
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+        
+        // Ensure iframe fills space on resize
+        window.addEventListener('resize', function() {
+            const tabContent = document.querySelector('.tab-content');
+            tabContent.style.height = (window.innerHeight - 50) + 'px';
+        });
+    </script>
+</body>
+</html>
