@@ -119,12 +119,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            overflow: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
             padding: 20px;
         }
         
         .corkboard-frame {
-            width: 5000px;
+            width: 98vw;
             height: 5000px;
             border: 20px solid #8b4513;
             border-radius: 4px;
@@ -228,7 +229,7 @@
             transform: translateX(-50%);
             width: 24px;
             height: 24px;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6" fill="%23ff3333"/><path d="M12 2v20M8 12h8" stroke="%23333" stroke-width="1.5"/></svg>');
+            background-image: url('Images/thumbtack.png');
             background-size: contain;
             background-repeat: no-repeat;
             cursor: move;
@@ -348,7 +349,7 @@
         #green { background: #b0f2b6; }
         #purple { background: #d9b0ff; }
         
-        /* Instructions */
+        /* Instructions - Reverted to original style */
         .instructions {
             position: fixed;
             top: 20px;
@@ -360,19 +361,6 @@
             max-width: 200px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             z-index: 101;
-            transition: all 0.3s ease;
-            overflow: hidden;
-            max-height: 20px;
-        }
-        
-        .instructions.collapsed {
-            max-height: 20px;
-            cursor: pointer;
-        }
-        
-        .instructions.expanded {
-            max-height: 200px;
-            cursor: default;
         }
         
         .instructions h3 {
@@ -425,23 +413,9 @@
             cursor: pointer;
         }
         
-        /* Scroll position indicator */
-        #scroll-position {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            z-index: 102;
-        }
-        
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 16px;
-            height: 16px;
         }
         
         ::-webkit-scrollbar-track {
@@ -457,10 +431,6 @@
         
         ::-webkit-scrollbar-thumb:hover {
             background: #9c6c3c;
-        }
-        
-        ::-webkit-scrollbar-corner {
-            background: #5a3e27;
         }
     </style>
 </head>
@@ -485,9 +455,9 @@
         <button id="rename-board" style="display: none;">Rename Board</button>
     </div>
 
-    <div class="instructions collapsed" id="instructions">
+    <div class="instructions" id="instructions">
         <h3>How to use <span class="toggle-instructions">+</span></h3>
-        <div class="content">
+        <div class="content" style="display: none;">
             <ul>
                 <li>Drag notes/images to move (grab by the pin)</li>
                 <li>Use resize handle (bottom-right) to resize</li>
@@ -498,8 +468,6 @@
             </ul>
         </div>
     </div>
-
-    <div id="scroll-position">X: 0, Y: 0</div>
 
     <div class="corkboard-container" id="corkboard-container" style="display: none;">
         <div class="corkboard-frame">
@@ -549,13 +517,14 @@
         let currentBoardName = "";
         let currentBoardCreator = "";
         let unsubscribeNotes = null;
-        let scrollX = 0;
         let scrollY = 0;
 
         // DOM elements
         const corkboard = document.getElementById('corkboard');
         const loadingElement = document.getElementById('loading');
         const instructions = document.getElementById('instructions');
+        const toggleInstructions = document.querySelector('.toggle-instructions');
+        const instructionsContent = document.querySelector('.instructions .content');
         const corkboardContainer = document.getElementById('corkboard-container');
         const boardSelection = document.getElementById('board-selection');
         const boardsList = document.getElementById('boards-list');
@@ -568,23 +537,18 @@
         const backToBoardsBtn = document.getElementById('back-to-boards');
         const renameBoardBtn = document.getElementById('rename-board');
         const uploadContainer = document.getElementById('upload-container');
-        const scrollPositionIndicator = document.getElementById('scroll-position');
 
         // Initialize app
         initApp();
 
-        // Toggle instructions
-        instructions.addEventListener('click', function(e) {
-            if (e.target.classList.contains('toggle-instructions') || e.target.tagName === 'H3') {
-                if (instructions.classList.contains('collapsed')) {
-                    instructions.classList.remove('collapsed');
-                    instructions.classList.add('expanded');
-                    document.querySelector('.toggle-instructions').textContent = '-';
-                } else {
-                    instructions.classList.remove('expanded');
-                    instructions.classList.add('collapsed');
-                    document.querySelector('.toggle-instructions').textContent = '+';
-                }
+        // Toggle instructions (original functionality)
+        toggleInstructions.addEventListener('click', function() {
+            if (instructionsContent.style.display === 'none') {
+                instructionsContent.style.display = 'block';
+                toggleInstructions.textContent = '-';
+            } else {
+                instructionsContent.style.display = 'none';
+                toggleInstructions.textContent = '+';
             }
         });
 
@@ -612,11 +576,9 @@
             }
         });
 
-        // Track scroll position
+        // Track scroll position (vertical only)
         corkboardContainer.addEventListener('scroll', function() {
-            scrollX = this.scrollLeft;
             scrollY = this.scrollTop;
-            scrollPositionIndicator.textContent = `X: ${scrollX}, Y: ${scrollY}`;
         });
 
         async function initApp() {
@@ -651,21 +613,34 @@
                         const boardData = doc.data();
                         const boardItem = document.createElement('div');
                         boardItem.className = 'board-item';
+                        boardItem.dataset.boardId = doc.id;
                         
                         let actionsHtml = `<button class="open-board" data-id="${doc.id}">Open</button>`;
                         
-                        // Only show delete/rename buttons for boards created by current user
+                        // Only show delete button for boards created by current user
                         if (boardData.createdBy === currentUser.uid) {
                             actionsHtml += `<button class="delete-board" data-id="${doc.id}">Delete</button>`;
                         }
                         
                         boardItem.innerHTML = `
-                            <h3>${boardData.name}</h3>
+                            <h3 class="board-name">${boardData.name}</h3>
                             <div class="board-actions">
                                 ${actionsHtml}
                             </div>
                         `;
                         boardsList.appendChild(boardItem);
+                        
+                        // Add double-click event for renaming (only for creator)
+                        if (boardData.createdBy === currentUser.uid) {
+                            const boardNameElement = boardItem.querySelector('.board-name');
+                            boardNameElement.addEventListener('dblclick', function(e) {
+                                e.stopPropagation();
+                                const newName = prompt("Enter new name for this board:", boardData.name);
+                                if (newName && newName.trim() !== "") {
+                                    renameBoard(doc.id, newName.trim());
+                                }
+                            });
+                        }
                     });
                     
                     // Add event listeners
@@ -829,7 +804,6 @@
             boardSelection.style.display = 'flex';
             
             // Reset scroll position
-            corkboardContainer.scrollLeft = 0;
             corkboardContainer.scrollTop = 0;
             
             // Reload boards
@@ -1135,7 +1109,7 @@
                     id: 'note_' + Date.now(),
                     type: 'text',
                     content: text,
-                    x: Math.random() * (corkboardContainer.offsetWidth - 200) + scrollX,
+                    x: Math.random() * (corkboardContainer.offsetWidth - 200),
                     y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                     width: 200,
                     height: 200,
@@ -1173,7 +1147,7 @@
                         id: 'note_' + Date.now(),
                         type: 'image',
                         content: compressedDataUrl, // Use compressed image
-                         x: Math.random() * (corkboardContainer.offsetWidth - 200) + scrollX,
+                         x: Math.random() * (corkboardContainer.offsetWidth - 200),
                         y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                         width: 200,
                         height: 200,
