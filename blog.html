@@ -246,72 +246,62 @@
     const notification = document.getElementById('notification');
 
     // Adding event listener
-    postButton.addEventListener('click', async function() {
-  const caption = captionInput.value.trim();
-  const file = mediaInput.files[0];
-
-  if (!caption && !file) {
-    showNotification('Please add a caption or media file!');
-    return;
-  }
-
-  postButton.disabled = true;
-  postButton.textContent = 'Posting...';
-
-  try {
-    let mediaUrl = null;
-    let mediaType = null;
-
-    // Upload file to Supabase Storage if selected
-    if (file) {
-      const filePath = `blog_media/${Date.now()}_${file.name}`;
-      const { error: uploadError } = await client
-        .storage
-        .from("uploads") // 👈 make sure bucket name = uploads
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = client
-        .storage
-        .from("uploads")
-        .getPublicUrl(filePath);
-
-      mediaUrl = urlData.publicUrl;
-      mediaType = file.type.startsWith("image/") ? "image" : "video";
-    }
-
-    // Insert post into Supabase DB
-    const { error: insertError } = await client
-      .from("posts")
-      .insert([{ caption, media_url: mediaUrl, media_type: mediaType }]);
-
-    if (insertError) throw insertError;
-
-    captionInput.value = '';
-    mediaInput.value = '';
-    previewContainer.style.display = 'none';
-
-    showNotification('Post created successfully!');
-    loadPosts(); // refresh
-  } catch (err) {
-    console.error("Error creating post:", err);
-    showNotification("Error creating post. Please try again.");
-  } finally {
-    postButton.disabled = false;
-    postButton.textContent = 'Post Update';
-  }
-});
-
-        // DOM elements
-        const mediaInput = document.getElementById('media');
-        const imagePreview = document.getElementById('imagePreview');
-        const videoPreview = document.getElementById('videoPreview');
-        const previewContainer = document.getElementById('previewContainer');
-        const captionInput = document.getElementById('caption');
-        const postButton = document.getElementById('postButton');
-        const postsList = document.getElementById('postsList');
-        const notification = document.getElementById('notification');
+        postButton.addEventListener('click', async function() {
+      const caption = captionInput.value.trim();
+      const file = mediaInput.files[0];
+    
+      if (!caption && !file) {
+        showNotification('Please add a caption or media file!');
+        return;
+      }
+    
+      postButton.disabled = true;
+      postButton.textContent = 'Posting...';
+    
+      try {
+        let mediaUrl = null;
+        let mediaType = null;
+    
+        // Upload file to Supabase Storage if selected
+        if (file) {
+          const filePath = `blog_media/${Date.now()}_${file.name}`;
+          const { error: uploadError } = await client
+            .storage
+            .from("uploads") // 👈 make sure bucket name = uploads
+            .upload(filePath, file);
+    
+          if (uploadError) throw uploadError;
+    
+          const { data: urlData } = client
+            .storage
+            .from("uploads")
+            .getPublicUrl(filePath);
+    
+          mediaUrl = urlData.publicUrl;
+          mediaType = file.type.startsWith("image/") ? "image" : "video";
+        }
+    
+        // Insert post into Supabase DB
+        const { error: insertError } = await client
+          .from("posts")
+          .insert([{ caption, media_url: mediaUrl, media_type: mediaType }]);
+    
+        if (insertError) throw insertError;
+    
+        captionInput.value = '';
+        mediaInput.value = '';
+        previewContainer.style.display = 'none';
+    
+        showNotification('Post created successfully!');
+        loadPosts(); // refresh
+      } catch (err) {
+        console.error("Error creating post:", err);
+        showNotification("Error creating post. Please try again.");
+      } finally {
+        postButton.disabled = false;
+        postButton.textContent = 'Post Update';
+      }
+    });
 
         // File preview functionality
         mediaInput.addEventListener('change', function(e) {
