@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Supabase Test</title>
+</head>
+<body>
+  <h1>Supabase Demo</h1>
+  
+  <input id="messageInput" type="text" placeholder="Type a message">
+  <button onclick="saveMessage()">Save</button>
+
+  <h2>Messages</h2>
+  <ul id="messagesList"></ul>
+
+  <!-- Load Supabase JS client -->
+  <script src="https://unpkg.com/@supabase/supabase-js"></script>
+  <script>
+    // Step 1: Replace with your own project URL + anon key
+    const SUPABASE_URL = "https://qcjeiiyhipmlhmqgjfqu.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjamVpaXloaXBtbGhtcWdqZnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMDgwOTcsImV4cCI6MjA3Mjc4NDA5N30.nDw5xPQWqCebdKLdox1w1d_xrMgZtWTgl6eJ9myJD9k";
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Save message to Supabase
+    async function saveMessage() {
+      const input = document.getElementById("messageInput");
+      const { data, error } = await supabase
+        .from("messages")
+        .insert([{ content: input.value }]);
+      
+      if (error) {
+        console.error(error);
+      } else {
+        input.value = "";
+        loadMessages();
+      }
+    }
+
+    // Load messages from Supabase
+    async function loadMessages() {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      const list = document.getElementById("messagesList");
+      list.innerHTML = "";
+      data.forEach(msg => {
+        const li = document.createElement("li");
+        li.textContent = msg.content;
+        list.appendChild(li);
+      });
+    }
+
+    // Load messages on page load
+    loadMessages();
+  </script>
+</body>
+</html>
