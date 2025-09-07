@@ -60,6 +60,39 @@
     });
   }
 
+  async function loadFiles() {
+  let { data, error } = await client
+    .storage
+    .from("uploads")
+    .list("uploads", {
+      limit: 100,
+      offset: 0,
+    });
+
+  if (error) {
+    console.error("Error loading files:", error.message);
+    return;
+  }
+
+  const list = document.getElementById("filesList");
+  list.innerHTML = "";
+
+  for (const file of data) {
+    const { data: urlData } = client
+      .storage
+      .from("uploads")
+      .getPublicUrl("uploads/" + file.name);
+
+    // Guess type based on extension
+    let type = "";
+    if (file.name.match(/\.(jpg|jpeg|png|gif)$/i)) type = "image/";
+    else if (file.name.match(/\.(mp4|webm|ogg)$/i)) type = "video/";
+    else type = "other";
+
+    addFileToList(urlData.publicUrl, type);
+  }
+}
+
   // Upload file to Supabase Storage
 async function uploadFile() {
   const fileInput = document.getElementById("fileInput");
@@ -116,8 +149,9 @@ function addFileToList(url, type) {
   list.appendChild(li);
 }
 
-  // Load messages on page load
-  loadMessages();
+loadMessages();
+loadFiles();
+
 </script>
 </body>
 </html>
