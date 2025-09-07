@@ -12,6 +12,13 @@
   <h2>Messages</h2>
   <ul id="messagesList"></ul>
 
+  <input type="file" id="fileInput">
+  <button onclick="uploadFile()">Upload File</button>
+  
+  <h2>Uploaded Files</h2>
+  <ul id="filesList"></ul>
+
+
 <!-- Load Supabase JS client -->
 <script src="https://unpkg.com/@supabase/supabase-js"></script>
 <script>
@@ -52,6 +59,62 @@
       list.appendChild(li);
     });
   }
+
+  // Upload file to Supabase Storage
+async function uploadFile() {
+  const fileInput = document.getElementById("fileInput");
+  const file = fileInput.files[0];
+  if (!file) return alert("Please choose a file first!");
+
+  // Store in a folder with timestamp to avoid overwriting
+  const filePath = `uploads/${Date.now()}_${file.name}`;
+
+  let { data, error } = await client
+    .storage
+    .from("uploads") // bucket name
+    .upload(filePath, file);
+
+  if (error) {
+    console.error("Upload error:", error.message);
+    return;
+  }
+
+  // Get public URL
+  const { data: urlData } = client
+    .storage
+    .from("uploads")
+    .getPublicUrl(filePath);
+
+  console.log("File available at:", urlData.publicUrl);
+
+  // Show file in list
+  addFileToList(urlData.publicUrl, file.type);
+}
+
+function addFileToList(url, type) {
+  const list = document.getElementById("filesList");
+  const li = document.createElement("li");
+
+  if (type.startsWith("image/")) {
+    const img = document.createElement("img");
+    img.src = url;
+    img.width = 200;
+    li.appendChild(img);
+  } else if (type.startsWith("video/")) {
+    const vid = document.createElement("video");
+    vid.src = url;
+    vid.width = 320;
+    vid.controls = true;
+    li.appendChild(vid);
+  } else {
+    const link = document.createElement("a");
+    link.href = url;
+    link.textContent = "Download file";
+    li.appendChild(link);
+  }
+
+  list.appendChild(li);
+}
 
   // Load messages on page load
   loadMessages();
