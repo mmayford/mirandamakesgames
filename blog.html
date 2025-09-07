@@ -84,6 +84,12 @@
             color: white;
         }
 
+        button:disabled {
+            background: #ffd6eb;
+            color: #c79ed1;
+            cursor: not-allowed;
+        }
+
         .file-input-container {
             position: relative;
             overflow: hidden;
@@ -186,6 +192,37 @@
             display: none;
             z-index: 1000;
         }
+
+        .progress-container {
+            height: 20px;
+            background: #ffe6f7;
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff85c0, #8a2be2);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            color: #8a2be2;
+            font-size: 0.9em;
+        }
+
+        .compress-options {
+            margin: 15px 0;
+            padding: 10px;
+            background: #ffe6f7;
+            border-radius: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -200,11 +237,23 @@
             </div>
             
             <div class="form-group">
-                <label for="media">Upload Photo or Video:</label>
+                <label for="media">Upload Photo or Video (max 20MB):</label>
                 <div class="file-input-container">
                     <div class="file-input-button">Choose File</div>
                     <input type="file" id="media" accept="image/*,video/*">
                 </div>
+                <div class="file-info" id="fileInfo"></div>
+            </div>
+            
+            <div class="compress-options" id="compressOptions">
+                <label>
+                    <input type="checkbox" id="compressImage" checked> Compress image to save space
+                </label>
+                <div class="file-info">Recommended for faster uploads</div>
+            </div>
+            
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
             </div>
             
             <div class="preview-container" id="previewContainer" style="display: none;">
@@ -233,6 +282,9 @@
     <!-- Firebase Storage -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
 
+    <!-- Image compression library -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.0/dist/browser-image-compression.js"></script>
+
     <script>
         // Your Firebase configuration
         const firebaseConfig = {
@@ -259,13 +311,39 @@
         const postButton = document.getElementById('postButton');
         const postsList = document.getElementById('postsList');
         const notification = document.getElementById('notification');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const fileInfo = document.getElementById('fileInfo');
+        const compressOptions = document.getElementById('compressOptions');
+        const compressImage = document.getElementById('compressImage');
+
+        let selectedFile = null;
 
         // File preview functionality
         mediaInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            selectedFile = e.target.files[0];
+            if (!selectedFile) return;
             
-            if (file.type.startsWith('image/')) {
+            // Check file size (max 20MB)
+            if (selectedFile.size > 20 * 1024 * 1024) {
+                showNotification('File is too large. Please select a file under 20MB.');
+                mediaInput.value = '';
+                selectedFile = null;
+                return;
+            }
+            
+            // Show file info
+            const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2);
+            fileInfo.textContent = `Selected file: ${selectedFile.name} (${fileSizeMB} MB)`;
+            
+            // Show compression options for images
+            if (selectedFile.type.startsWith('image/')) {
+                compressOptions.style.display = 'block';
+            } else {
+                compressOptions.style.display = 'none';
+            }
+            
+            if (selectedFile.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     imagePreview.src = e.target.result;
@@ -273,19 +351,37 @@
                     videoPreview.style.display = 'none';
                     previewContainer.style.display = 'block';
                 };
-                reader.readAsDataURL(file);
-            } else if (file.type.startsWith('video/')) {
-                videoPreview.src = URL.createObjectURL(file);
+                reader.readAsDataURL(selectedFile);
+            } else if (selectedFile.type.startsWith('video/')) {
+                videoPreview.src = URL.createObjectURL(selectedFile);
                 videoPreview.style.display = 'block';
                 imagePreview.style.display = 'none';
                 previewContainer.style.display = 'block';
             }
         });
 
+        // Compress image function
+        async function compressImageFile(file) {
+            try {
+                const options = {
+                    maxSizeMB: 2,
+                    maxWidthOrHeight: 1920,
+                    useWebWorker: true,
+                    fileType: 'image/jpeg'
+                };
+                
+                return await imageCompression(file, options);
+            } catch (error) {
+                console.error('Error compressing image:', error);
+                showNotification('Error compressing image. Uploading original file.');
+                return file; // Return original if compression fails
+            }
+        }
+
         // Post creation functionality
         postButton.addEventListener('click', async function() {
             const caption = captionInput.value.trim();
-            const file = mediaInput.files[0];
+            const file = selectedFile;
             
             if (!caption && !file) {
                 showNotification('Please add a caption or media file!');
@@ -294,41 +390,98 @@
             
             postButton.disabled = true;
             postButton.textContent = 'Posting...';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
             
             try {
                 let mediaUrl = null;
                 let mediaType = null;
+                let fileToUpload = file;
                 
                 // Upload media file if selected
                 if (file) {
+                    // Compress image if option is selected
+                    if (file.type.startsWith('image/') && compressImage.checked) {
+                        progressBar.style.width = '10%';
+                        fileToUpload = await compressImageFile(file);
+                        progressBar.style.width = '30%';
+                    }
+                    
                     const storageRef = storage.ref();
-                    const fileRef = storageRef.child(`blog_media/${Date.now()}_${file.name}`);
-                    await fileRef.put(file);
-                    mediaUrl = await fileRef.getDownloadURL();
-                    mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+                    const fileRef = storageRef.child(`blog_media/${Date.now()}_${fileToUpload.name}`);
+                    
+                    // Upload file with progress monitoring
+                    const uploadTask = fileRef.put(fileToUpload);
+                    
+                    // Monitor upload progress
+                    uploadTask.on('state_changed',
+                        (snapshot) => {
+                            // Progress monitoring
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            progressBar.style.width = progress + '%';
+                        },
+                        (error) => {
+                            // Handle unsuccessful uploads
+                            console.error('Upload error:', error);
+                            showNotification('Upload failed. Please try again.');
+                            postButton.disabled = false;
+                            postButton.textContent = 'Post Update';
+                            progressContainer.style.display = 'none';
+                        },
+                        async () => {
+                            // Handle successful uploads
+                            mediaUrl = await uploadTask.snapshot.ref.getDownloadURL();
+                            mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+                            
+                            // Create post document in Firestore
+                            await db.collection('posts').add({
+                                caption: caption,
+                                mediaUrl: mediaUrl,
+                                mediaType: mediaType,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            
+                            // Clear form
+                            captionInput.value = '';
+                            mediaInput.value = '';
+                            selectedFile = null;
+                            previewContainer.style.display = 'none';
+                            fileInfo.textContent = '';
+                            compressOptions.style.display = 'none';
+                            
+                            showNotification('Post created successfully!');
+                            loadPosts(); // Reload posts to show the new one
+                            
+                            postButton.disabled = false;
+                            postButton.textContent = 'Post Update';
+                            progressContainer.style.display = 'none';
+                        }
+                    );
+                } else {
+                    // No file, just text post
+                    await db.collection('posts').add({
+                        caption: caption,
+                        mediaUrl: null,
+                        mediaType: null,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    // Clear form
+                    captionInput.value = '';
+                    
+                    showNotification('Post created successfully!');
+                    loadPosts(); // Reload posts to show the new one
+                    
+                    postButton.disabled = false;
+                    postButton.textContent = 'Post Update';
+                    progressContainer.style.display = 'none';
                 }
-                
-                // Create post document in Firestore
-                await db.collection('posts').add({
-                    caption: caption,
-                    mediaUrl: mediaUrl,
-                    mediaType: mediaType,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                // Clear form
-                captionInput.value = '';
-                mediaInput.value = '';
-                previewContainer.style.display = 'none';
-                
-                showNotification('Post created successfully!');
-                loadPosts(); // Reload posts to show the new one
             } catch (error) {
                 console.error('Error creating post:', error);
                 showNotification('Error creating post. Please try again.');
-            } finally {
                 postButton.disabled = false;
                 postButton.textContent = 'Post Update';
+                progressContainer.style.display = 'none';
             }
         });
 
