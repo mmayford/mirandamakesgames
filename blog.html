@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Blog Manager</title>
+    <style>
+        body {
+            background-color: #fff5f5;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border: 2px solid #ff85c0;
+        }
+
+        h1 {
+            color: #ff85c0;
+            text-align: center;
+            margin-top: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 0px #ffccf9;
+        }
+
+        .post-form {
+            background: #fff5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 2px dashed #ff85c0;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #8a2be2;
+            font-weight: bold;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ffccf9;
+            border-radius: 10px;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background: #ffccf9;
+            color: #8a2be2;
+            border: 2px solid #ff85c0;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #ff85c0;
+            color: white;
+        }
+
+        .file-input-container {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-container input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            background: #ffccf9;
+            color: #8a2be2;
+            border: 2px solid #ff85c0;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .preview-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .preview-image, .preview-video {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            border: 2px solid #ff85c0;
+            margin-top: 10px;
+        }
+
+        .posts-container {
+            margin-top: 30px;
+        }
+
+        .post {
+            background: #fff5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #ffccf9;
+            position: relative;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px dotted #ff85c0;
+            padding-bottom: 10px;
+        }
+
+        .post-date {
+            color: #8a2be2;
+            font-size: 0.9em;
+        }
+
+        .post-content {
+            margin-bottom: 15px;
+        }
+
+        .post-media {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .post-image, .post-video {
+            max-width: 100%;
+            border-radius: 10px;
+            border: 2px solid #ff85c0;
+        }
+
+        .loading {
+            text-align: center;
+            color: #ff85c0;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            background: #ffccf9;
+            border: 2px solid #ff85c0;
+            border-radius: 10px;
+            color: #8a2be2;
+            font-weight: bold;
+            display: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>My Blog Manager</h1>
+        
+        <div class="post-form">
+            <h2>Create New Post</h2>
+            <div class="form-group">
+                <label for="caption">Caption:</label>
+                <textarea id="caption" placeholder="What's on your mind?"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="media">Upload Photo or Video:</label>
+                <div class="file-input-container">
+                    <div class="file-input-button">Choose File</div>
+                    <input type="file" id="media" accept="image/*,video/*">
+                </div>
+            </div>
+            
+            <div class="preview-container" id="previewContainer" style="display: none;">
+                <h3>Preview:</h3>
+                <img id="imagePreview" class="preview-image" style="display: none;">
+                <video id="videoPreview" class="preview-video" controls style="display: none;"></video>
+            </div>
+            
+            <button id="postButton">Post Update</button>
+        </div>
+        
+        <div class="posts-container">
+            <h2>Recent Posts</h2>
+            <div id="postsList">
+                <div class="loading">Loading posts...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notification" id="notification"></div>
+
+    <!-- Firebase App (core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <!-- Firebase Storage -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+
+    <script>
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOK7CFTxZblXhI4uklO-dEkLlASY1_8EI",
+            authDomain: "blog-55acb.firebaseapp.com",
+            projectId: "blog-55acb",
+            storageBucket: "blog-55acb.firebasestorage.app",
+            messagingSenderId: "245126902288",
+            appId: "1:245126902288:web:01f04e2192b22d5eff9095",
+            measurementId: "G-BMFJ7T9Q1B"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // DOM elements
+        const mediaInput = document.getElementById('media');
+        const imagePreview = document.getElementById('imagePreview');
+        const videoPreview = document.getElementById('videoPreview');
+        const previewContainer = document.getElementById('previewContainer');
+        const captionInput = document.getElementById('caption');
+        const postButton = document.getElementById('postButton');
+        const postsList = document.getElementById('postsList');
+        const notification = document.getElementById('notification');
+
+        // File preview functionality
+        mediaInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    videoPreview.style.display = 'none';
+                    previewContainer.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type.startsWith('video/')) {
+                videoPreview.src = URL.createObjectURL(file);
+                videoPreview.style.display = 'block';
+                imagePreview.style.display = 'none';
+                previewContainer.style.display = 'block';
+            }
+        });
+
+        // Post creation functionality
+        postButton.addEventListener('click', async function() {
+            const caption = captionInput.value.trim();
+            const file = mediaInput.files[0];
+            
+            if (!caption && !file) {
+                showNotification('Please add a caption or media file!');
+                return;
+            }
+            
+            postButton.disabled = true;
+            postButton.textContent = 'Posting...';
+            
+            try {
+                let mediaUrl = null;
+                let mediaType = null;
+                
+                // Upload media file if selected
+                if (file) {
+                    const storageRef = storage.ref();
+                    const fileRef = storageRef.child(`blog_media/${Date.now()}_${file.name}`);
+                    await fileRef.put(file);
+                    mediaUrl = await fileRef.getDownloadURL();
+                    mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+                }
+                
+                // Create post document in Firestore
+                await db.collection('posts').add({
+                    caption: caption,
+                    mediaUrl: mediaUrl,
+                    mediaType: mediaType,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Clear form
+                captionInput.value = '';
+                mediaInput.value = '';
+                previewContainer.style.display = 'none';
+                
+                showNotification('Post created successfully!');
+                loadPosts(); // Reload posts to show the new one
+            } catch (error) {
+                console.error('Error creating post:', error);
+                showNotification('Error creating post. Please try again.');
+            } finally {
+                postButton.disabled = false;
+                postButton.textContent = 'Post Update';
+            }
+        });
+
+        // Load posts from Firestore
+        function loadPosts() {
+            postsList.innerHTML = '<div class="loading">Loading posts...</div>';
+            
+            db.collection('posts')
+                .orderBy('createdAt', 'desc')
+                .get()
+                .then((querySnapshot) => {
+                    postsList.innerHTML = '';
+                    
+                    if (querySnapshot.empty) {
+                        postsList.innerHTML = '<div class="loading">No posts yet. Be the first to post!</div>';
+                        return;
+                    }
+                    
+                    querySnapshot.forEach((doc) => {
+                        const post = doc.data();
+                        const postElement = createPostElement(post);
+                        postsList.appendChild(postElement);
+                    });
+                })
+                .catch((error) => {
+                    console.error('Error loading posts:', error);
+                    postsList.innerHTML = '<div class="loading">Error loading posts. Please refresh the page.</div>';
+                });
+        }
+
+        // Create HTML element for a post
+        function createPostElement(post) {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'post';
+            
+            const date = post.createdAt ? post.createdAt.toDate().toLocaleString() : 'Just now';
+            
+            let mediaHtml = '';
+            if (post.mediaUrl) {
+                if (post.mediaType === 'image') {
+                    mediaHtml = `<div class="post-media"><img src="${post.mediaUrl}" class="post-image"></div>`;
+                } else if (post.mediaType === 'video') {
+                    mediaHtml = `
+                        <div class="post-media">
+                            <video controls class="post-video">
+                                <source src="${post.mediaUrl}">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>`;
+                }
+            }
+            
+            postDiv.innerHTML = `
+                <div class="post-header">
+                    <div class="post-date">${date}</div>
+                </div>
+                <div class="post-content">${post.caption || ''}</div>
+                ${mediaHtml}
+            `;
+            
+            return postDiv;
+        }
+
+        // Show notification
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Load posts when page loads
+        window.addEventListener('load', loadPosts);
+    </script>
+</body>
+</html>
