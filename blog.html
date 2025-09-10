@@ -251,6 +251,15 @@
         .hidden {
             display: none;
         }
+        
+        .login-prompt {
+            text-align: center;
+            padding: 15px;
+            background: #fff5f5;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px dashed #ff85c0;
+        }
     </style>
 </head>
 <body>
@@ -300,6 +309,10 @@
             <button id="postButton">Post Update</button>
         </div>
         
+        <div class="login-prompt hidden" id="loginPrompt">
+            <p>Want to share your own posts? <a href="#" id="promptLoginLink">Login here</a> to start posting!</p>
+        </div>
+        
         <div class="posts-container">
             <h2>Recent Posts</h2>
             <div id="postsList">
@@ -338,6 +351,8 @@
         const loginPassword = document.getElementById('loginPassword');
         const submitLogin = document.getElementById('submitLogin');
         const closeLogin = document.getElementById('closeLogin');
+        const loginPrompt = document.getElementById('loginPrompt');
+        const promptLoginLink = document.getElementById('promptLoginLink');
 
         // Check for existing session on page load
         async function checkAuthStatus() {
@@ -353,6 +368,7 @@
         // Update UI when user is logged in
         function updateUIForLoggedInUser(user) {
             postForm.classList.remove('hidden');
+            loginPrompt.classList.add('hidden');
             loginButton.style.display = 'none';
             userInfo.style.display = 'flex';
             
@@ -365,6 +381,7 @@
         // Update UI when user is logged out
         function updateUIForLoggedOutUser() {
             postForm.classList.add('hidden');
+            loginPrompt.classList.remove('hidden');
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
         }
@@ -404,6 +421,11 @@
 
         // Event listeners for authentication
         loginButton.addEventListener('click', function() {
+            loginModal.style.display = 'flex';
+        });
+
+        promptLoginLink.addEventListener('click', function(e) {
+            e.preventDefault();
             loginModal.style.display = 'flex';
         });
 
