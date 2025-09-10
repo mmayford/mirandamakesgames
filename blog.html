@@ -266,7 +266,7 @@
     <div class="auth-container" id="authContainer">
         <div class="user-info" id="userInfo" style="display: none;">
             <div class="user-avatar" id="userAvatar"></div>
-
+            <span id="userEmail"></span>
             <button id="logoutButton" class="auth-button">Logout</button>
         </div>
         <button id="loginButton" class="auth-button">Login</button>
@@ -370,7 +370,7 @@
             
             // Display user info
             const email = user.email;
-            userEmail.textContent = email;
+            //userEmail.textContent = email;
             userAvatar.textContent = email.charAt(0).toUpperCase();
         }
 
@@ -397,7 +397,7 @@
             if (data.user) {
                 updateUIForLoggedInUser(data.user);
                 loginModal.style.display = 'none';
-                showNotification('Logged in successfully!');
+                //showNotification('Logged in successfully!');
                 return true;
             }
             
