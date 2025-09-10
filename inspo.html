@@ -90,14 +90,14 @@
             transition: opacity 0.3s ease;
         }
         
-        .board-item:hover {
+/*         .board-item:hover {
             transform: translateY(-5px) scale(1.05);
             box-shadow: 0 10px 25px rgba(0,0,0,0.15);
         }
         
         .board-item:hover::after {
             opacity: 0.3;
-        }
+        } */
         
         .board-actions {
             display: flex;
@@ -179,7 +179,6 @@
             width: 98vw;
             height: 5000px;
             border: 25px solid #b07c57;
-            border-radius: 12px;
             box-shadow: 
                 inset 0 0 30px rgba(0, 0, 0, 0.4),
                 0 10px 25px rgba(0, 0, 0, 0.4);
@@ -257,10 +256,7 @@
         }
         
 
-        .note {
-            border-radius: 16px;
-            font-size: 15px;
-        }
+.note { position: relative; min-width: 80px; min-height: 80px; padding: 15px; box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; align-items: center; transition: box-shadow 0.3s; overflow: hidden; }
         
         .note.mine {
             box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.25);
@@ -435,7 +431,7 @@
         }
         
         #back-to-boards {
-            background: linear-gradient(to right, #d44d8c, #b13c7a);
+            background: #d44d8c;
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
@@ -444,7 +440,7 @@
         }
         
         #rename-board {
-            background: linear-gradient(to right, #7a3c6c, #5e2a55);
+            background: #7a3c6c;
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
