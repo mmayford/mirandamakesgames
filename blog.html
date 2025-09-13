@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Blog Manager</title>
+    <title>My Blog</title>
     <style>
         body {
             background-color: #fff5f5;
@@ -316,10 +316,6 @@
             </div>
         </div>
     </div>
-    
-        <div class="login-prompt hidden" id="loginPrompt">
-            <p>Want to share your own posts? <a href="#" id="promptLoginLink">Login here</a> to start posting!</p>
-        </div>
         
     <div class="notification" id="notification"></div>
 
@@ -351,7 +347,6 @@
         const loginPassword = document.getElementById('loginPassword');
         const submitLogin = document.getElementById('submitLogin');
         const closeLogin = document.getElementById('closeLogin');
-        const loginPrompt = document.getElementById('loginPrompt');
         const promptLoginLink = document.getElementById('promptLoginLink');
 
         // Check for existing session on page load
@@ -368,7 +363,6 @@
         // Update UI when user is logged in
         function updateUIForLoggedInUser(user) {
             postForm.classList.remove('hidden');
-            loginPrompt.classList.add('hidden');
             loginButton.style.display = 'none';
             userInfo.style.display = 'flex';
             
@@ -381,7 +375,6 @@
         // Update UI when user is logged out
         function updateUIForLoggedOutUser() {
             postForm.classList.add('hidden');
-            loginPrompt.classList.remove('hidden');
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
         }
