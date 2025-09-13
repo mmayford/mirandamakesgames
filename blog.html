@@ -545,31 +545,31 @@
             }
         });
 
-        // Load posts from Supabase
+// Load posts from Supabase
         async function loadPosts() {
-            postsList.innerHTML = '<div class="loading">Loading posts...</div>';
-            
-            const { data, error } = await client
-                .from("posts")
-                .select("*")
-                .order("created_at", { ascending: false });
-            
-            if (error) {
-                console.error("Error loading posts:", error);
-                postsList.innerHTML = '<div class="loading">Error loading posts.</div>';
-                return;
-            }
-            
-            postsList.innerHTML = '';
-            if (!data.length) {
-                postsList.innerHTML = '<div class="loading">No posts yet. Be the first to post!</div>';
-                return;
-            }
-            
-            data.forEach(post => {
-                const postElement = createPostElement(post);
-                postsList.appendChild(postElement);
-            });
+          postsList.innerHTML = '<div class="loading">Loading posts...</div>';
+
+          const { data, error } = await client
+            .from("posts")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            console.error("Error loading posts:", error);
+            postsList.innerHTML = '<div class="loading">Error loading posts.</div>';
+            return;
+          }
+
+          postsList.innerHTML = '';
+          if (!data.length) {
+            postsList.innerHTML = '<div class="loading">No posts yet.</div>';
+            return;
+          }
+
+          data.forEach(post => {
+            const postElement = createPostElement(post);
+            postsList.appendChild(postElement);
+          });
         }
 
           // Create HTML element for a post
