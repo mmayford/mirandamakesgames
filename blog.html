@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Blog Manager</title>
+    <title>Game Dev Updates</title>
     <style>
         body {
             background-color: #fff5f5;
@@ -283,7 +283,7 @@
     </div>
 
     <div class="container">
-        <h1>My Blog Manager</h1>
+        <h1>Game Dev Updates</h1>
         
         <div class="post-form hidden" id="postForm">
             <h2>Create New Post</h2>
@@ -307,10 +307,6 @@
             </div>
             
             <button id="postButton">Post Update</button>
-        </div>
-        
-        <div class="login-prompt hidden" id="loginPrompt">
-            <p>Want to share your own posts? <a href="#" id="promptLoginLink">Login here</a> to start posting!</p>
         </div>
         
         <div class="posts-container">
@@ -351,7 +347,6 @@
         const loginPassword = document.getElementById('loginPassword');
         const submitLogin = document.getElementById('submitLogin');
         const closeLogin = document.getElementById('closeLogin');
-        const loginPrompt = document.getElementById('loginPrompt');
         const promptLoginLink = document.getElementById('promptLoginLink');
 
         // Track if we're currently loading posts
@@ -372,20 +367,18 @@
         // Update UI when user is logged in
         function updateUIForLoggedInUser(user) {
             postForm.classList.remove('hidden');
-            loginPrompt.classList.add('hidden');
             loginButton.style.display = 'none';
             userInfo.style.display = 'flex';
             
             // Display user info
             const email = user.email;
-            userEmail.textContent = email;
+            //userEmail.textContent = email;
             userAvatar.textContent = email.charAt(0).toUpperCase();
         }
 
         // Update UI when user is logged out
         function updateUIForLoggedOutUser() {
             postForm.classList.add('hidden');
-            loginPrompt.classList.remove('hidden');
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
         }
@@ -405,7 +398,6 @@
             if (data.user) {
                 updateUIForLoggedInUser(data.user);
                 loginModal.style.display = 'none';
-                showNotification('Logged in successfully!');
                 return true;
             }
             
@@ -419,7 +411,6 @@
                 showNotification('Logout error: ' + error.message);
             } else {
                 updateUIForLoggedOutUser();
-                showNotification('Logged out successfully');
             }
         }
 
