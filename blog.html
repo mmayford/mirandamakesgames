@@ -251,15 +251,6 @@
         .hidden {
             display: none;
         }
-        
-        .login-prompt {
-            text-align: center;
-            padding: 15px;
-            background: #fff5f5;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 2px dashed #ff85c0;
-        }
     </style>
 </head>
 <body>
@@ -323,7 +314,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js"></script>
     <script>
         const SUPABASE_URL = "https://qcjeiiyhipmlhmqgjfqu.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjamVpaXloaXBtbGhtcWdqZnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMDgwOTcsImV4cCI6MjA3Mjc4NDA5N30.nDw5xPQWqCebdKLdox1w1d_xrMgZtWTgl6eJ9myJD9k";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjamVpaXloaXBtbGhtcWdqZnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMDgwOTcsImV4cCI6MjA7Mjc4NDA5N30.nDw5xPQWqCebdKLdox1w1d_xrMgZtWTgl6eJ9myJD9k";
 
         const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -347,7 +338,6 @@
         const loginPassword = document.getElementById('loginPassword');
         const submitLogin = document.getElementById('submitLogin');
         const closeLogin = document.getElementById('closeLogin');
-        const promptLoginLink = document.getElementById('promptLoginLink');
 
         // Track if we're currently loading posts
         let isLoadingPosts = false;
@@ -372,7 +362,7 @@
             
             // Display user info
             const email = user.email;
-            //userEmail.textContent = email;
+            userEmail.textContent = email;
             userAvatar.textContent = email.charAt(0).toUpperCase();
         }
 
@@ -398,6 +388,7 @@
             if (data.user) {
                 updateUIForLoggedInUser(data.user);
                 loginModal.style.display = 'none';
+                showNotification('Logged in successfully!');
                 return true;
             }
             
@@ -411,16 +402,12 @@
                 showNotification('Logout error: ' + error.message);
             } else {
                 updateUIForLoggedOutUser();
+                showNotification('Logged out successfully');
             }
         }
 
         // Event listeners for authentication
         loginButton.addEventListener('click', function() {
-            loginModal.style.display = 'flex';
-        });
-
-        promptLoginLink.addEventListener('click', function(e) {
-            e.preventDefault();
             loginModal.style.display = 'flex';
         });
 
