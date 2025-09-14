@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Blog</title>
+    <title>My Blog Manager</title>
     <style>
         body {
             background-color: #fff5f5;
@@ -283,7 +283,7 @@
     </div>
 
     <div class="container">
-        <h1>Game Dev Updates</h1>
+        <h1>My Blog Manager</h1>
         
         <div class="post-form hidden" id="postForm">
             <h2>Create New Post</h2>
@@ -309,6 +309,10 @@
             <button id="postButton">Post Update</button>
         </div>
         
+        <div class="login-prompt hidden" id="loginPrompt">
+            <p>Want to share your own posts? <a href="#" id="promptLoginLink">Login here</a> to start posting!</p>
+        </div>
+        
         <div class="posts-container">
             <h2>Recent Posts</h2>
             <div id="postsList">
@@ -316,14 +320,14 @@
             </div>
         </div>
     </div>
-        
+    
     <div class="notification" id="notification"></div>
 
     <!-- Load Supabase JS client -->
     <script src="https://unpkg.com/@supabase/supabase-js"></script>
     <script>
         const SUPABASE_URL = "https://qcjeiiyhipmlhmqgjfqu.supabase.co";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjamVpaXloaXBtbGhtcWdqZnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMDgwOTcsImV4cCI6MjA3Mjc4NDA5N30.nDw5xPQWqCebdKLdox1w1d_xrMgZtWTgl6eJ9myJD9k";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjamVpaXloaXBtbGhtcWdqZnF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcyMDgwOTcsImV4cCI6MjA7Mjc4NDA5N30.nDw5xPQWqCebdKLdox1w1d_xrMgZtWTgl6eJ9myJD9k";
 
         const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -347,7 +351,12 @@
         const loginPassword = document.getElementById('loginPassword');
         const submitLogin = document.getElementById('submitLogin');
         const closeLogin = document.getElementById('closeLogin');
+        const loginPrompt = document.getElementById('loginPrompt');
         const promptLoginLink = document.getElementById('promptLoginLink');
+
+        // Track if we're currently loading posts
+        let isLoadingPosts = false;
+        let postsSubscription = null;
 
         // Check for existing session on page load
         async function checkAuthStatus() {
@@ -363,18 +372,20 @@
         // Update UI when user is logged in
         function updateUIForLoggedInUser(user) {
             postForm.classList.remove('hidden');
+            loginPrompt.classList.add('hidden');
             loginButton.style.display = 'none';
             userInfo.style.display = 'flex';
             
             // Display user info
             const email = user.email;
-            //userEmail.textContent = email;
+            userEmail.textContent = email;
             userAvatar.textContent = email.charAt(0).toUpperCase();
         }
 
         // Update UI when user is logged out
         function updateUIForLoggedOutUser() {
             postForm.classList.add('hidden');
+            loginPrompt.classList.remove('hidden');
             loginButton.style.display = 'block';
             userInfo.style.display = 'none';
         }
@@ -394,7 +405,7 @@
             if (data.user) {
                 updateUIForLoggedInUser(data.user);
                 loginModal.style.display = 'none';
-                //showNotification('Logged in successfully!');
+                showNotification('Logged in successfully!');
                 return true;
             }
             
@@ -506,7 +517,9 @@
                 previewContainer.style.display = 'none';
                 
                 showNotification('Post created successfully!');
-                loadPosts(); // refresh
+                
+                // Refresh the posts list after a short delay to ensure the new post is available
+                setTimeout(loadPosts, 1000);
             } catch (err) {
                 console.error("Error creating post:", err);
                 showNotification("Error creating post. Please try again.");
@@ -538,54 +551,73 @@
             }
         });
 
-// Load posts from Supabase
+        // Load posts from Supabase
         async function loadPosts() {
-          postsList.innerHTML = '<div class="loading">Loading posts...</div>';
-
-          const { data, error } = await client
-            .from("posts")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-          if (error) {
-            console.error("Error loading posts:", error);
-            postsList.innerHTML = '<div class="loading">Error loading posts.</div>';
-            return;
-          }
-
-          postsList.innerHTML = '';
-          if (!data.length) {
-            postsList.innerHTML = '<div class="loading">No posts yet.</div>';
-            return;
-          }
-
-          data.forEach(post => {
-            const postElement = createPostElement(post);
-            postsList.appendChild(postElement);
-          });
+            if (isLoadingPosts) return;
+            
+            isLoadingPosts = true;
+            const currentScrollPosition = window.scrollY;
+            
+            try {
+                const { data, error } = await client
+                    .from("posts")
+                    .select("*")
+                    .order("created_at", { ascending: false });
+                
+                if (error) {
+                    console.error("Error loading posts:", error);
+                    postsList.innerHTML = '<div class="loading">Error loading posts.</div>';
+                    return;
+                }
+                
+                if (!data || data.length === 0) {
+                    postsList.innerHTML = '<div class="loading">No posts yet. Be the first to post!</div>';
+                    return;
+                }
+                
+                // Create a document fragment for better performance
+                const fragment = document.createDocumentFragment();
+                
+                data.forEach(post => {
+                    const postElement = createPostElement(post);
+                    fragment.appendChild(postElement);
+                });
+                
+                // Clear and update the posts list all at once
+                postsList.innerHTML = '';
+                postsList.appendChild(fragment);
+                
+            } catch (err) {
+                console.error("Unexpected error loading posts:", err);
+                postsList.innerHTML = '<div class="loading">Error loading posts. Please refresh the page.</div>';
+            } finally {
+                isLoadingPosts = false;
+                // Restore scroll position
+                window.scrollTo(0, currentScrollPosition);
+            }
         }
 
-          // Create HTML element for a post
-           function createPostElement(post) {
-          const postDiv = document.createElement('div');
-          postDiv.className = 'post';
-        
-          const date = post.created_at
-            ? new Date(post.created_at).toLocaleString()
-            : 'Just now';
-    
-          let mediaHtml = '';
-          if (post.media_url) {
-            if (post.media_type === 'image') {
-              mediaHtml = `<div class="post-media"><img src="${post.media_url}" class="post-image"></div>`;
-            } else if (post.media_type === 'video') {
-              mediaHtml = `
-                <div class="post-media">
-                  <video controls class="post-video">
-                    <source src="${post.media_url}">
-                    Your browser does not support the video tag.
-                  </video>
-                </div>`;
+        // Create HTML element for a post
+        function createPostElement(post) {
+            const postDiv = document.createElement('div');
+            postDiv.className = 'post';
+            
+            const date = post.created_at
+                ? new Date(post.created_at).toLocaleString()
+                : 'Just now';
+            
+            let mediaHtml = '';
+            if (post.media_url) {
+                if (post.media_type === 'image') {
+                    mediaHtml = `<div class="post-media"><img src="${post.media_url}" class="post-image" onerror="this.style.display='none'"></div>`;
+                } else if (post.media_type === 'video') {
+                    mediaHtml = `
+                        <div class="post-media">
+                            <video controls class="post-video">
+                                <source src="${post.media_url}">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>`;
                 }
             }
             
