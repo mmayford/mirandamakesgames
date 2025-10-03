@@ -1104,6 +1104,8 @@ function showBoardSelection() {
             if (noteContainer) noteContainer.remove();
         }
 
+// ... all your previous code remains the same until the makeDraggable function ...
+
         function makeDraggable(element, noteId) {
             let isDragging = false;
             let startX, startY;
@@ -1146,31 +1148,32 @@ function showBoardSelection() {
                 element.style.top = newY + 'px';
             });
             
-document.addEventListener('mouseup', async function() {
-    if (isDragging) {
-        isDragging = false;
-        
-        // Update position in database (LIKE FIREBASE)
-        try {
-            const { error } = await supabaseClient
-                .from('notes')
-                .update({
-                    x: parseInt(element.style.left),
-                    y: parseInt(element.style.top),
-                    z_index: parseInt(element.style.zIndex)
-                })
-                .eq('id', noteId);
-            
-            if (error) {
-                console.error("Error updating note position:", error);
-            } else {
-                console.log("Note position updated successfully");
-            }
-        } catch (error) {
-            console.error("Error updating note position:", error);
-        }
-    }
-});
+            document.addEventListener('mouseup', async function() {
+                if (isDragging) {
+                    isDragging = false;
+                    
+                    // Update position in database (LIKE FIREBASE)
+                    try {
+                        const { error } = await supabaseClient
+                            .from('notes')
+                            .update({
+                                x: parseInt(element.style.left),
+                                y: parseInt(element.style.top),
+                                z_index: parseInt(element.style.zIndex)
+                            })
+                            .eq('id', noteId);
+                        
+                        if (error) {
+                            console.error("Error updating note position:", error);
+                        } else {
+                            console.log("Note position updated successfully");
+                        }
+                    } catch (error) {
+                        console.error("Error updating note position:", error);
+                    }
+                }
+            });
+        } // <-- THIS WAS MISSING
 
         function makeResizable(element, noteId) {
             let isResizing = false;
@@ -1209,78 +1212,79 @@ document.addEventListener('mouseup', async function() {
                 element.style.height = newHeight + 'px';
             });
             
-document.addEventListener('mouseup', async function() {
-    if (isResizing) {
-        isResizing = false;
-        
-        // Update size in database (LIKE FIREBASE)
-        try {
-            const { error } = await supabaseClient
-                .from('notes')
-                .update({
-                    width: parseInt(element.style.width),
-                    height: parseInt(element.style.height),
-                    z_index: parseInt(element.style.zIndex)
-                })
-                .eq('id', noteId);
-            
-            if (error) {
-                console.error("Error updating note size:", error);
-            } else {
-                console.log("Note size updated successfully");
-            }
-        } catch (error) {
-            console.error("Error updating note size:", error);
-        }
-    }
-});
+            document.addEventListener('mouseup', async function() {
+                if (isResizing) {
+                    isResizing = false;
+                    
+                    // Update size in database (LIKE FIREBASE)
+                    try {
+                        const { error } = await supabaseClient
+                            .from('notes')
+                            .update({
+                                width: parseInt(element.style.width),
+                                height: parseInt(element.style.height),
+                                z_index: parseInt(element.style.zIndex)
+                            })
+                            .eq('id', noteId);
+                        
+                        if (error) {
+                            console.error("Error updating note size:", error);
+                        } else {
+                            console.log("Note size updated successfully");
+                        }
+                    } catch (error) {
+                        console.error("Error updating note size:", error);
+                    }
+                }
+            });
+        } // <-- THIS WAS MISSING
 
         // Add text note
-document.getElementById('add-text').addEventListener('click', async function() {
-    const text = document.getElementById('text-note').value;
-    if (text.trim()) {
-        console.log("currentBoardId:", currentBoardId);
-        console.log("currentBoardId type:", typeof currentBoardId);
-        console.log("currentUser.id:", currentUser.id);
-        
-        // Test if it's a valid UUID format
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        console.log("Is valid UUID?", uuidRegex.test(currentBoardId));
-        
-        const newNote = {
-            id: 'note_' + Date.now(),
-            type: 'text',
-            content: text,
-            x: 100,
-            y: 100,
-            width: 200,
-            height: 200,
-            user_id: currentUser.id,
-            board_id: currentBoardId, // This might be the problem!
-            color: selectedColor,
-            rotation: 0,
-            z_index: highestZIndex++
-        };
-        
-        console.log("Full note object:", newNote);
-        
-        try {
-            const { data, error } = await supabaseClient
-                .from('notes')
-                .insert([newNote]);
-            
-            if (error) {
-                console.error("Supabase error:", error);
-                return;
+        document.getElementById('add-text').addEventListener('click', async function() {
+            const text = document.getElementById('text-note').value;
+            if (text.trim()) {
+                console.log("currentBoardId:", currentBoardId);
+                console.log("currentBoardId type:", typeof currentBoardId);
+                console.log("currentUser.id:", currentUser.id);
+                
+                // Test if it's a valid UUID format
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                console.log("Is valid UUID?", uuidRegex.test(currentBoardId));
+                
+                const newNote = {
+                    id: 'note_' + Date.now(),
+                    type: 'text',
+                    content: text,
+                    x: 100,
+                    y: 100,
+                    width: 200,
+                    height: 200,
+                    user_id: currentUser.id,
+                    board_id: currentBoardId,
+                    color: selectedColor,
+                    rotation: 0,
+                    z_index: highestZIndex++
+                };
+                
+                console.log("Full note object:", newNote);
+                
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('notes')
+                        .insert([newNote]);
+                    
+                    if (error) {
+                        console.error("Supabase error:", error);
+                        return;
+                    }
+                    
+                    console.log("Success!", data);
+                    document.getElementById('text-note').value = '';
+                } catch (error) {
+                    console.error("Unexpected error:", error);
+                }
             }
-            
-            console.log("Success!", data);
-            document.getElementById('text-note').value = '';
-        } catch (error) {
-            console.error("Unexpected error:", error);
-        }
-    }
-});
+        });
 
         // Add image note
         document.getElementById('add-image').addEventListener('click', function() {
@@ -1342,36 +1346,36 @@ document.getElementById('add-text').addEventListener('click', async function() {
             }
         }
 
-// Double-click to edit text notes
-document.addEventListener('dblclick', async function(e) {
-    if (e.target.classList.contains('note-text')) {
-        const textElement = e.target;
-        const noteContainer = textElement.closest('.note-container');
-        const noteId = noteContainer.dataset.noteId;
-        const currentText = textElement.textContent;
-        
-        if (noteContainer.querySelector('.note').classList.contains('mine')) {
-            const newText = prompt('Edit your note:', currentText);
-            
-            if (newText !== null) {
-                try {
-                    const { error } = await supabaseClient
-                        .from('notes')
-                        .update({ content: newText })
-                        .eq('id', noteId);
+        // Double-click to edit text notes
+        document.addEventListener('dblclick', async function(e) {
+            if (e.target.classList.contains('note-text')) {
+                const textElement = e.target;
+                const noteContainer = textElement.closest('.note-container');
+                const noteId = noteContainer.dataset.noteId;
+                const currentText = textElement.textContent;
+                
+                if (noteContainer.querySelector('.note').classList.contains('mine')) {
+                    const newText = prompt('Edit your note:', currentText);
                     
-                    if (error) {
-                        console.error("Error updating note text:", error);
-                    } else {
-                        console.log("Note text updated successfully");
+                    if (newText !== null) {
+                        try {
+                            const { error } = await supabaseClient
+                                .from('notes')
+                                .update({ content: newText })
+                                .eq('id', noteId);
+                            
+                            if (error) {
+                                console.error("Error updating note text:", error);
+                            } else {
+                                console.log("Note text updated successfully");
+                            }
+                        } catch (error) {
+                            console.error("Error updating note text:", error);
+                        }
                     }
-                } catch (error) {
-                    console.error("Error updating note text:", error);
                 }
             }
-        }
-    }
-});
+        });
         
         // Color selection
         document.querySelectorAll('.color-option').forEach(option => {
@@ -1382,6 +1386,7 @@ document.addEventListener('dblclick', async function(e) {
                 this.classList.add('active');
                 selectedColor = this.getAttribute('data-color');
             });
+        }); // <-- THIS WAS MISSING
     </script>
 </body>
 </html>
