@@ -1188,41 +1188,51 @@
         }
 
         // Add text note
-        document.getElementById('add-text').addEventListener('click', async function() {
-            const text = document.getElementById('text-note').value;
-            if (text.trim()) {
-                const newNote = {
-                    id: 'note_' + Date.now(),
-                    type: 'text',
-                    content: text,
-                    x: Math.random() * (corkboardContainer.offsetWidth - 200),
-                    y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
-                    width: 200,
-                    height: 200,
-                    user_id: currentUser.id,
-                    board_id: currentBoardId,
-                    color: selectedColor,
-                    rotation: Math.random() * 4 - 2,
-                    z_index: highestZIndex++
-                };
-                
-                try {
-                    const { error } = await supabaseClient
-                        .from('notes')
-                        .insert([newNote]);
-                    
-                    if (error) {
-                        console.error("Error adding text note:", error);
-                        return;
-                    }
-                    
-                    console.log("Text note added successfully");
-                    document.getElementById('text-note').value = '';
-                } catch (error) {
-                    console.error("Error adding text note:", error);
-                }
+document.getElementById('add-text').addEventListener('click', async function() {
+    const text = document.getElementById('text-note').value;
+    if (text.trim()) {
+        console.log("currentBoardId:", currentBoardId);
+        console.log("currentBoardId type:", typeof currentBoardId);
+        console.log("currentUser.id:", currentUser.id);
+        
+        // Test if it's a valid UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        console.log("Is valid UUID?", uuidRegex.test(currentBoardId));
+        
+        const newNote = {
+            id: 'note_' + Date.now(),
+            type: 'text',
+            content: text,
+            x: 100,
+            y: 100,
+            width: 200,
+            height: 200,
+            user_id: currentUser.id,
+            board_id: currentBoardId, // This might be the problem!
+            color: selectedColor,
+            rotation: 0,
+            z_index: highestZIndex++
+        };
+        
+        console.log("Full note object:", newNote);
+        
+        try {
+            const { data, error } = await supabaseClient
+                .from('notes')
+                .insert([newNote]);
+            
+            if (error) {
+                console.error("Supabase error:", error);
+                return;
             }
-        });
+            
+            console.log("Success!", data);
+            document.getElementById('text-note').value = '';
+        } catch (error) {
+            console.error("Unexpected error:", error);
+        }
+    }
+});
 
         // Add image note
         document.getElementById('add-image').addEventListener('click', function() {
