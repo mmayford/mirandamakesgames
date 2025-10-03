@@ -2,10 +2,7 @@
 <html>
 <head>
     <title>Inspiration Corkboard</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -75,29 +72,6 @@
             position: relative;
             overflow: hidden;
         }
-        
-/*         .board-item::after {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            background: #d9a8e3;
-            z-index: -1;
-            border-radius: 20px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        } */
-        
-/*         .board-item:hover {
-            transform: translateY(-5px) scale(1.05);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        
-        .board-item:hover::after {
-            opacity: 0.3;
-        } */
         
         .board-actions {
             display: flex;
@@ -214,7 +188,7 @@
             border: 2px solid #ffc2e2;
         }
         
-#text-note { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Comic Sans MS', cursive; width: 200px; }
+        #text-note { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: 'Comic Sans MS', cursive; width: 200px; }
         
         button {
             padding: 10px 18px;
@@ -249,8 +223,7 @@
             filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.2));
         }
         
-
-.note { position: relative; min-width: 80px; min-height: 80px; padding: 15px; box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; align-items: center; transition: box-shadow 0.3s; overflow: hidden; }
+        .note { position: relative; min-width: 80px; min-height: 80px; padding: 15px; box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; align-items: center; transition: box-shadow 0.3s; overflow: hidden; }
         
         .note.mine {
             box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.25);
@@ -260,10 +233,9 @@
             z-index: 20;
         }
         
-.pin { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 24px; height: 24px; background-image: url('Images/thumbtack.png'); background-size: contain; background-repeat: no-repeat; cursor: move; z-index: 25; }
-    
+        .pin { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); width: 24px; height: 24px; background-image: url('Images/thumbtack.png'); background-size: contain; background-repeat: no-repeat; cursor: move; z-index: 25; }
         
-.note-text { width: 100%; min-height: 50px; background: transparent; border: none; resize: none; font-family: 'Comic Sans MS', cursive; font-size: 16px; outline: none; flex-grow: 1; margin-top: 5px; padding: 5px; overflow-wrap: break-word; cursor: text; overflow: auto; } .note img { max-width: 100%; max-height: 200px; margin-top: 5px; object-fit: contain; }
+        .note-text { width: 100%; min-height: 50px; background: transparent; border: none; resize: none; font-family: 'Comic Sans MS', cursive; font-size: 16px; outline: none; flex-grow: 1; margin-top: 5px; padding: 5px; overflow-wrap: break-word; cursor: text; overflow: auto; } .note img { max-width: 100%; max-height: 200px; margin-top: 5px; object-fit: contain; }
         
         .pinned-image {
             box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.3);
@@ -318,14 +290,13 @@
             opacity: 1;
         }
         
-    /* Sticky note colors */
-    .note[data-color="yellow"] { background: linear-gradient(135deg, #fff8b3 0%, #fffacd 100%); }
-    .note[data-color="pink"]   { background: linear-gradient(135deg, #ffb3d9 0%, #ffd6eb 100%); }
-    .note[data-color="blue"]   { background: linear-gradient(135deg, #b3e0ff 0%, #d6f0ff 100%); }
-    .note[data-color="green"]  { background: linear-gradient(135deg, #c6f7d0 0%, #e2ffe9 100%); }
-    .note[data-color="purple"] { background: linear-gradient(135deg, #e0b3ff 0%, #f0d9ff 100%); }
+        /* Sticky note colors */
+        .note[data-color="yellow"] { background: linear-gradient(135deg, #fff8b3 0%, #fffacd 100%); }
+        .note[data-color="pink"]   { background: linear-gradient(135deg, #ffb3d9 0%, #ffd6eb 100%); }
+        .note[data-color="blue"]   { background: linear-gradient(135deg, #b3e0ff 0%, #d6f0ff 100%); }
+        .note[data-color="green"]  { background: linear-gradient(135deg, #c6f7d0 0%, #e2ffe9 100%); }
+        .note[data-color="purple"] { background: linear-gradient(135deg, #e0b3ff 0%, #f0d9ff 100%); }
 
-        
         /* Rotation for more natural look */
         .note-container {
             transform: rotate(calc(-3deg + 6deg * random()));
@@ -461,7 +432,6 @@
             background: #7e5e46;
         }
     </style>
-
 </head>
 <body>
     <div id="board-selection">
@@ -521,22 +491,13 @@
     </div>
 
     <script>
-        // Your Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyB4izdi6kTnyr2OwYyM9hr69wwVqiVrZl8",
-            authDomain: "inspocorkboard.firebaseapp.com",
-            projectId: "inspocorkboard",
-            storageBucket: "inspocorkboard.firebasestorage.app",
-            messagingSenderId: "1055098716394",
-            appId: "1:1055098716394:web:bd01f225db45d42f405793",
-            measurementId: "G-EN7B83205B"
-        };
-
-        // Initialize Firebase (using compat version)
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-
+        // Supabase configuration - replace with your project details
+        const SUPABASE_URL = "https://qcjeiiyhipmlhmqgjfqu.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_MoixGwsqhk6fM-OOL-TA5Q_Y0pR_zun";
+        
+        // Initialize Supabase client
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         // User and notes variables
         let currentUser = null;
         let notes = [];
@@ -612,13 +573,11 @@
 
         async function initApp() {
             try {
-                console.log("Initializing Firebase...");
+                console.log("Initializing Supabase...");
                 
-                // Sign in anonymously
-                console.log("Attempting anonymous sign-in...");
-                const cred = await auth.signInAnonymously();
-                currentUser = auth.currentUser;
-                console.log("Signed in successfully. User ID:", currentUser.uid);
+                // Generate a random user ID for anonymous usage
+                currentUser = { id: generateUserId() };
+                console.log("Generated user ID:", currentUser.id);
                 
                 // Load boards
                 loadBoards();
@@ -631,28 +590,49 @@
             }
         }
         
-        function loadBoards() {
-            db.collection("boards").get().then(querySnapshot => {
+        // Generate a unique user ID for anonymous users
+        function generateUserId() {
+            // Try to get existing user ID from localStorage
+            let userId = localStorage.getItem('corkboard_user_id');
+            if (!userId) {
+                // Generate a new ID if none exists
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('corkboard_user_id', userId);
+            }
+            return userId;
+        }
+        
+        async function loadBoards() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('boards')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    console.error("Error loading boards:", error);
+                    return;
+                }
+                
                 boardsList.innerHTML = '';
-                if (querySnapshot.empty) {
+                if (!data || data.length === 0) {
                     boardsList.innerHTML = '<p style="color: white;">No boards yet. Create the first one!</p>';
                     createBoardBtn.style.display = 'block'; // Show create button if no boards
                 } else {
-                    querySnapshot.forEach(doc => {
-                        const boardData = doc.data();
+                    data.forEach(board => {
                         const boardItem = document.createElement('div');
                         boardItem.className = 'board-item';
-                        boardItem.dataset.boardId = doc.id;
+                        boardItem.dataset.boardId = board.id;
                         
-                        let actionsHtml = `<button class="open-board" data-id="${doc.id}">Open</button>`;
+                        let actionsHtml = `<button class="open-board" data-id="${board.id}">Open</button>`;
                         
                         // Only show delete button for boards created by current user
-                        if (boardData.createdBy === currentUser.uid) {
-                            actionsHtml += `<button class="delete-board" data-id="${doc.id}">Delete</button>`;
+                        if (board.created_by === currentUser.id) {
+                            actionsHtml += `<button class="delete-board" data-id="${board.id}">Delete</button>`;
                         }
                         
                         boardItem.innerHTML = `
-                            <h3 class="board-name">${boardData.name}</h3>
+                            <h3 class="board-name">${board.name}</h3>
                             <div class="board-actions">
                                 ${actionsHtml}
                             </div>
@@ -660,13 +640,13 @@
                         boardsList.appendChild(boardItem);
                         
                         // Add double-click event for renaming (only for creator)
-                        if (boardData.createdBy === currentUser.uid) {
+                        if (board.created_by === currentUser.id) {
                             const boardNameElement = boardItem.querySelector('.board-name');
                             boardNameElement.addEventListener('dblclick', function(e) {
                                 e.stopPropagation();
-                                const newName = prompt("Enter new name for this board:", boardData.name);
+                                const newName = prompt("Enter new name for this board:", board.name);
                                 if (newName && newName.trim() !== "") {
-                                    renameBoard(doc.id, newName.trim());
+                                    renameBoard(board.id, newName.trim());
                                 }
                             });
                         }
@@ -689,140 +669,201 @@
                         });
                     });
                 }
-            }).catch(error => {
+            } catch (error) {
                 console.error("Error loading boards:", error);
-            });
+            }
         }
         
-        function createNewBoard(name) {
-            const newBoard = {
-                name: name,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdBy: currentUser.uid
-            };
-            
-            db.collection("boards").add(newBoard)
-                .then((docRef) => {
-                    console.log("Board created with ID: ", docRef.id);
-                    newBoardNameInput.value = '';
-                    createBoardForm.style.display = 'none';
-                    createBoardBtn.style.display = 'block'; // Show create button again
-                    openBoard(docRef.id);
-                })
-                .catch(error => {
+        async function createNewBoard(name) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('boards')
+                    .insert([
+                        { 
+                            name: name,
+                            created_by: currentUser.id
+                        }
+                    ])
+                    .select();
+                
+                if (error) {
                     console.error("Error creating board: ", error);
-                });
+                    return;
+                }
+                
+                console.log("Board created with ID: ", data[0].id);
+                newBoardNameInput.value = '';
+                createBoardForm.style.display = 'none';
+                createBoardBtn.style.display = 'block'; // Show create button again
+                openBoard(data[0].id);
+            } catch (error) {
+                console.error("Error creating board: ", error);
+            }
         }
         
-        function renameBoard(boardId, newName) {
-            db.collection("boards").doc(boardId).update({
-                name: newName
-            })
-            .then(() => {
+        async function renameBoard(boardId, newName) {
+            try {
+                const { error } = await supabaseClient
+                    .from('boards')
+                    .update({ name: newName })
+                    .eq('id', boardId);
+                
+                if (error) {
+                    console.error("Error renaming board: ", error);
+                    alert("Error renaming board. Only the board creator can rename it.");
+                    return;
+                }
+                
                 console.log("Board renamed successfully");
                 currentBoardName = newName;
                 currentBoardNameSpan.textContent = newName;
                 
                 // Update the board name in the selection list too
                 loadBoards();
-            })
-            .catch(error => {
+            } catch (error) {
                 console.error("Error renaming board: ", error);
                 alert("Error renaming board. Only the board creator can rename it.");
-            });
+            }
         }
         
-        function deleteBoard(boardId) {
-            // First delete all notes in this board
-            db.collection("notes")
-                .where("boardId", "==", boardId)
-                .get()
-                .then(querySnapshot => {
-                    const deletePromises = [];
-                    querySnapshot.forEach(doc => {
-                        deletePromises.push(doc.ref.delete());
-                    });
-                    
-                    return Promise.all(deletePromises);
-                })
-                .then(() => {
-                    // Then delete the board itself
-                    return db.collection("boards").doc(boardId).delete();
-                })
-                .then(() => {
-                    console.log("Board deleted successfully");
-                    loadBoards();
-                })
-                .catch(error => {
-                    console.error("Error deleting board: ", error);
+        async function deleteBoard(boardId) {
+            try {
+                // First delete all notes in this board
+                const { error: notesError } = await supabaseClient
+                    .from('notes')
+                    .delete()
+                    .eq('board_id', boardId);
+                
+                if (notesError) {
+                    console.error("Error deleting notes: ", notesError);
+                    return;
+                }
+                
+                // Then delete the board itself
+                const { error: boardError } = await supabaseClient
+                    .from('boards')
+                    .delete()
+                    .eq('id', boardId);
+                
+                if (boardError) {
+                    console.error("Error deleting board: ", boardError);
                     alert("Error deleting board. Only the board creator can delete it.");
-                });
+                    return;
+                }
+                
+                console.log("Board deleted successfully");
+                loadBoards();
+            } catch (error) {
+                console.error("Error deleting board: ", error);
+                alert("Error deleting board. Only the board creator can delete it.");
+            }
         }
         
-        function openBoard(boardId) {
+        async function openBoard(boardId) {
             currentBoardId = boardId;
             
-            // Get board name
-            db.collection("boards").doc(boardId).get()
-                .then(doc => {
-                    if (doc.exists) {
-                        const boardData = doc.data();
-                        currentBoardName = boardData.name;
-                        currentBoardCreator = boardData.createdBy;
-                        currentBoardNameSpan.textContent = currentBoardName;
-                        
-                        // Show rename button only if current user created this board
-                        if (currentBoardCreator === currentUser.uid) {
-                            renameBoardBtn.style.display = 'block';
-                        } else {
-                            renameBoardBtn.style.display = 'none';
-                        }
-                        
-                        // Show the board UI
-                        boardSelection.style.display = 'none';
-                        corkboardContainer.style.display = 'block';
-                        boardHeader.style.display = 'flex';
-                        uploadContainer.style.display = 'flex';
-                        
-                        // Clear existing notes
-                        corkboard.innerHTML = '';
-                        
-                        // Set up real-time listener for this board's notes
-                        if (unsubscribeNotes) {
-                            unsubscribeNotes(); // Remove previous listener if any
-                        }
-                        
-                        unsubscribeNotes = db.collection("notes")
-                            .where("boardId", "==", boardId)
-                            .onSnapshot(snapshot => {
-                                console.log("Received snapshot with", snapshot.docs.length, "notes");
-                                snapshot.docChanges().forEach(change => {
-                                    if (change.type === "added") {
-                                        addNoteToBoard(change.doc.data());
-                                    }
-                                    if (change.type === "modified") {
-                                        updateNoteOnBoard(change.doc.data());
-                                    }
-                                    if (change.type === "removed") {
-                                        removeNoteFromBoard(change.doc.id);
-                                    }
-                                });
-                            }, error => {
-                                console.error("Firestore listener error:", error);
-                            });
-                    } else {
-                        console.error("Board not found");
-                    }
-                })
-                .catch(error => {
+            try {
+                // Get board name
+                const { data, error } = await supabaseClient
+                    .from('boards')
+                    .select('*')
+                    .eq('id', boardId)
+                    .single();
+                
+                if (error) {
                     console.error("Error getting board: ", error);
+                    return;
+                }
+                
+                currentBoardName = data.name;
+                currentBoardCreator = data.created_by;
+                currentBoardNameSpan.textContent = currentBoardName;
+                
+                // Show rename button only if current user created this board
+                if (currentBoardCreator === currentUser.id) {
+                    renameBoardBtn.style.display = 'block';
+                } else {
+                    renameBoardBtn.style.display = 'none';
+                }
+                
+                // Show the board UI
+                boardSelection.style.display = 'none';
+                corkboardContainer.style.display = 'block';
+                boardHeader.style.display = 'flex';
+                uploadContainer.style.display = 'flex';
+                
+                // Clear existing notes
+                corkboard.innerHTML = '';
+                
+                // Load existing notes for this board
+                loadBoardNotes(boardId);
+                
+                // Set up real-time listener for this board's notes
+                setupRealtimeListener(boardId);
+                
+            } catch (error) {
+                console.error("Error opening board: ", error);
+            }
+        }
+        
+        async function loadBoardNotes(boardId) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('notes')
+                    .select('*')
+                    .eq('board_id', boardId);
+                
+                if (error) {
+                    console.error("Error loading notes: ", error);
+                    return;
+                }
+                
+                data.forEach(note => {
+                    addNoteToBoard(note);
                 });
+            } catch (error) {
+                console.error("Error loading notes: ", error);
+            }
+        }
+        
+        function setupRealtimeListener(boardId) {
+            // Remove previous subscription if exists
+            if (unsubscribeNotes) {
+                supabaseClient.removeChannel(unsubscribeNotes);
+            }
+            
+            // Subscribe to changes in the notes table for this board
+            unsubscribeNotes = supabaseClient
+                .channel('notes-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'notes',
+                        filter: `board_id=eq.${boardId}`
+                    },
+                    (payload) => {
+                        console.log('Change received!', payload);
+                        
+                        if (payload.eventType === 'INSERT') {
+                            addNoteToBoard(payload.new);
+                        }
+                        if (payload.eventType === 'UPDATE') {
+                            updateNoteOnBoard(payload.new);
+                        }
+                        if (payload.eventType === 'DELETE') {
+                            removeNoteFromBoard(payload.old.id);
+                        }
+                    }
+                )
+                .subscribe();
         }
         
         function showBoardSelection() {
             // Unsubscribe from notes listener
             if (unsubscribeNotes) {
-                unsubscribeNotes();
+                supabaseClient.removeChannel(unsubscribeNotes);
                 unsubscribeNotes = null;
             }
             
@@ -839,43 +880,36 @@
             loadBoards();
         }
         
-        // Add this function to compress images
-        function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        // Calculate new dimensions
-                        if (width > height) {
-                            if (width > maxWidth) {
-                                height *= maxWidth / width;
-                                width = maxWidth;
-                            }
-                        } else {
-                            if (height > maxHeight) {
-                                width *= maxHeight / height;
-                                height = maxHeight;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        // Convert to compressed data URL
-                        resolve(canvas.toDataURL('image/jpeg', quality));
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
+        // Upload image to Supabase Storage
+        async function uploadImage(file) {
+            try {
+                // Generate a unique file name
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
+                const filePath = `images/${fileName}`;
+                
+                // Upload the image to Supabase Storage
+                const { data, error } = await supabaseClient
+                    .storage
+                    .from('corkboard-images') // Replace with your bucket name
+                    .upload(filePath, file);
+                
+                if (error) {
+                    console.error("Error uploading image: ", error);
+                    throw error;
+                }
+                
+                // Get the public URL for the uploaded image
+                const { data: { publicUrl } } = supabaseClient
+                    .storage
+                    .from('corkboard-images')
+                    .getPublicUrl(filePath);
+                
+                return publicUrl;
+            } catch (error) {
+                console.error("Error in uploadImage: ", error);
+                throw error;
+            }
         }
         
         function addNoteToBoard(noteData) {
@@ -890,7 +924,7 @@
             noteContainer.style.width = (noteData.width || 200) + 'px';
             noteContainer.style.height = (noteData.height || 200) + 'px';
             noteContainer.dataset.noteId = noteData.id;
-            noteContainer.style.zIndex = noteData.zIndex || highestZIndex++;
+            noteContainer.style.zIndex = noteData.z_index || highestZIndex++;
             
             // Create pin
             const pin = document.createElement('div');
@@ -937,7 +971,7 @@
             const rotation = noteData.rotation || (Math.random() * 4 - 2);
             noteContainer.style.transform = `rotate(${rotation}deg)`;
             
-            if (noteData.userId === currentUser.uid) {
+            if (noteData.user_id === currentUser.id) {
                 noteElement.classList.add('mine');
                 
                 // Add delete button for user's own notes
@@ -947,9 +981,7 @@
                 deleteBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (confirm('Delete this note?')) {
-                        db.collection("notes").doc(noteData.id).delete().catch(error => {
-                            console.error("Error deleting note:", error);
-                        });
+                        deleteNote(noteData.id);
                     }
                 });
                 noteElement.appendChild(deleteBtn);
@@ -977,16 +1009,23 @@
             corkboard.appendChild(noteContainer);
         }
 
-        function bringToFront(element, noteId) {
+        async function bringToFront(element, noteId) {
             highestZIndex++;
             element.style.zIndex = highestZIndex;
             
             // Update z-index in database
-            db.collection("notes").doc(noteId).update({
-                zIndex: highestZIndex
-            }).catch(error => {
+            try {
+                const { error } = await supabaseClient
+                    .from('notes')
+                    .update({ z_index: highestZIndex })
+                    .eq('id', noteId);
+                
+                if (error) {
+                    console.error("Error updating z-index:", error);
+                }
+            } catch (error) {
                 console.error("Error updating z-index:", error);
-            });
+            }
         }
 
         function updateNoteOnBoard(noteData) {
@@ -1000,10 +1039,10 @@
                     noteContainer.style.height = noteData.height + 'px';
                 }
                 
-                if (noteData.zIndex) {
-                    noteContainer.style.zIndex = noteData.zIndex;
-                    if (noteData.zIndex > highestZIndex) {
-                        highestZIndex = noteData.zIndex;
+                if (noteData.z_index) {
+                    noteContainer.style.zIndex = noteData.z_index;
+                    if (noteData.z_index > highestZIndex) {
+                        highestZIndex = noteData.z_index;
                     }
                 }
                 
@@ -1061,18 +1100,27 @@
                 element.style.top = newY + 'px';
             });
             
-            document.addEventListener('mouseup', function() {
+            document.addEventListener('mouseup', async function() {
                 if (isDragging) {
                     isDragging = false;
                     
                     // Update position in database
-                    db.collection("notes").doc(noteId).update({
-                        x: parseInt(element.style.left),
-                        y: parseInt(element.style.top),
-                        zIndex: parseInt(element.style.zIndex)
-                    }).catch(error => {
+                    try {
+                        const { error } = await supabaseClient
+                            .from('notes')
+                            .update({
+                                x: parseInt(element.style.left),
+                                y: parseInt(element.style.top),
+                                z_index: parseInt(element.style.zIndex)
+                            })
+                            .eq('id', noteId);
+                        
+                        if (error) {
+                            console.error("Error updating note position:", error);
+                        }
+                    } catch (error) {
                         console.error("Error updating note position:", error);
-                    });
+                    }
                 }
             });
         }
@@ -1114,24 +1162,33 @@
                 element.style.height = newHeight + 'px';
             });
             
-            document.addEventListener('mouseup', function() {
+            document.addEventListener('mouseup', async function() {
                 if (isResizing) {
                     isResizing = false;
                     
                     // Update size in database
-                    db.collection("notes").doc(noteId).update({
-                        width: parseInt(element.style.width),
-                        height: parseInt(element.style.height),
-                        zIndex: parseInt(element.style.zIndex)
-                    }).catch(error => {
+                    try {
+                        const { error } = await supabaseClient
+                            .from('notes')
+                            .update({
+                                width: parseInt(element.style.width),
+                                height: parseInt(element.style.height),
+                                z_index: parseInt(element.style.zIndex)
+                            })
+                            .eq('id', noteId);
+                        
+                        if (error) {
+                            console.error("Error updating note size:", error);
+                        }
+                    } catch (error) {
                         console.error("Error updating note size:", error);
-                    });
+                    }
                 }
             });
         }
 
         // Add text note
-        document.getElementById('add-text').addEventListener('click', function() {
+        document.getElementById('add-text').addEventListener('click', async function() {
             const text = document.getElementById('text-note').value;
             if (text.trim()) {
                 const newNote = {
@@ -1142,22 +1199,28 @@
                     y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                     width: 200,
                     height: 200,
-                    userId: currentUser.uid,
-                    boardId: currentBoardId,
+                    user_id: currentUser.id,
+                    board_id: currentBoardId,
                     color: selectedColor,
                     rotation: Math.random() * 4 - 2,
-                    zIndex: highestZIndex++,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    z_index: highestZIndex++
                 };
                 
-                db.collection("notes").doc(newNote.id).set(newNote)
-                    .then(() => {
-                        console.log("Text note added successfully");
-                        document.getElementById('text-note').value = '';
-                    })
-                    .catch(error => {
+                try {
+                    const { error } = await supabaseClient
+                        .from('notes')
+                        .insert([newNote]);
+                    
+                    if (error) {
                         console.error("Error adding text note:", error);
-                    });
+                        return;
+                    }
+                    
+                    console.log("Text note added successfully");
+                    document.getElementById('text-note').value = '';
+                } catch (error) {
+                    console.error("Error adding text note:", error);
+                }
             }
         });
 
@@ -1169,26 +1232,33 @@
         document.getElementById('image-upload').addEventListener('change', async function() {
             if (this.files && this.files[0]) {
                 try {
-                    // Compress the image first
-                    const compressedDataUrl = await compressImage(this.files[0]);
+                    // Upload the image to Supabase Storage
+                    const imageUrl = await uploadImage(this.files[0]);
                     
                     const newNote = {
                         id: 'note_' + Date.now(),
                         type: 'image',
-                        content: compressedDataUrl, // Use compressed image
-                         x: Math.random() * (corkboardContainer.offsetWidth - 200),
+                        content: imageUrl,
+                        x: Math.random() * (corkboardContainer.offsetWidth - 200),
                         y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                         width: 200,
                         height: 200,
-                        userId: currentUser.uid,
-                        boardId: currentBoardId,
+                        user_id: currentUser.id,
+                        board_id: currentBoardId,
                         rotation: Math.random() * 4 - 2,
-                        zIndex: highestZIndex++,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        z_index: highestZIndex++
                     };
                     
-                    // Save to Firebase
-                    await db.collection("notes").doc(newNote.id).set(newNote);
+                    // Save to Supabase
+                    const { error } = await supabaseClient
+                        .from('notes')
+                        .insert([newNote]);
+                    
+                    if (error) {
+                        console.error("Error adding image note:", error);
+                        return;
+                    }
+                    
                     console.log("Image note added successfully");
                     
                 } catch (error) {
@@ -1198,8 +1268,24 @@
             }
         });
 
+        // Delete a note
+        async function deleteNote(noteId) {
+            try {
+                const { error } = await supabaseClient
+                    .from('notes')
+                    .delete()
+                    .eq('id', noteId);
+                
+                if (error) {
+                    console.error("Error deleting note:", error);
+                }
+            } catch (error) {
+                console.error("Error deleting note:", error);
+            }
+        }
+
         // Double-click to edit text notes
-        document.addEventListener('dblclick', function(e) {
+        document.addEventListener('dblclick', async function(e) {
             if (e.target.classList.contains('note-text')) {
                 const textElement = e.target;
                 const noteContainer = textElement.closest('.note-container');
@@ -1210,11 +1296,18 @@
                     const newText = prompt('Edit your note:', currentText);
                     
                     if (newText !== null) {
-                        db.collection("notes").doc(noteId).update({
-                            content: newText
-                        }).catch(error => {
+                        try {
+                            const { error } = await supabaseClient
+                                .from('notes')
+                                .update({ content: newText })
+                                .eq('id', noteId);
+                            
+                            if (error) {
+                                console.error("Error updating note text:", error);
+                            }
+                        } catch (error) {
                             console.error("Error updating note text:", error);
-                        });
+                        }
                     }
                 }
             }
