@@ -1297,7 +1297,10 @@ function setupRealtimeListener(board_id) {
                 if (error) {
                     console.error("Error deleting note:", error);
                 }
-                // DON'T call removeNoteFromBoard here - let real-time handle it
+                else
+                {
+                     removeNoteFromBoard(noteId);
+                }
             } catch (error) {
                 console.error("Error deleting note:", error);
             }
