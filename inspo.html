@@ -1241,24 +1241,60 @@
         });
 
         // Delete a note
-        async function deleteNote(noteId) {
+async function deleteNote(noteId) {
+    try {
+        // First, get the note to check if it's an image note
+        const { data: note, error: fetchError } = await supabaseClient
+            .from('notes')
+            .select('*')
+            .eq('id', noteId)
+            .single();
+        
+        if (fetchError) {
+            console.error("Error fetching note for deletion:", fetchError);
+            return;
+        }
+        
+        // If it's an image note, delete the image from storage first
+        if (note.type === 'image' && note.content) {
             try {
-                const { error } = await supabaseClient
-                    .from('notes')
-                    .delete()
-                    .eq('id', noteId);
+                // Extract the file path from the URL
+                const url = new URL(note.content);
+                const filePath = url.pathname.split('/storage/v1/object/public/')[1];
                 
-                if (error) {
-                    console.error("Error deleting note:", error);
+                if (filePath) {
+                    const { error: storageError } = await supabaseClient
+                        .storage
+                        .from('corkboard-images') // Replace with your bucket name
+                        .remove([filePath]);
+                    
+                    if (storageError) {
+                        console.error("Error deleting image from storage:", storageError);
+                    } else {
+                        console.log("Image deleted from storage:", filePath);
+                    }
                 }
-                else
-                {
-                     removeNoteFromBoard(noteId);
-                }
-            } catch (error) {
-                console.error("Error deleting note:", error);
+            } catch (storageErr) {
+                console.error("Error processing image deletion:", storageErr);
             }
         }
+        
+        // Then delete the note from the database
+        const { error } = await supabaseClient
+            .from('notes')
+            .delete()
+            .eq('id', noteId);
+        
+        if (error) {
+            console.error("Error deleting note:", error);
+        } else {
+            // MANUALLY remove from UI:
+            removeNoteFromBoard(noteId);
+        }
+    } catch (error) {
+        console.error("Error deleting note:", error);
+    }
+}
         
         // Double-click to edit text notes
         document.addEventListener('dblclick', async function(e) {
