@@ -806,9 +806,6 @@
                 // Load existing notes for this board
                 loadBoardNotes(board_id);
                 
-                // Set up real-time listener for this board's notes
-                //setupRealtimeListener(board_id);
-                
             } catch (error) {
                 console.error("Error opening board: ", error);
             }
@@ -834,50 +831,6 @@
             }
         }
         
-function setupRealtimeListener(board_id) {
-    // Unsubscribe from previous listener if it exists
-    if (unsubscribeNotes) {
-        console.log('Removing previous subscription');
-        supabaseClient.removeChannel(unsubscribeNotes);
-    }
-
-    console.log('Setting up real-time listener for board:', board_id);
-    
-    unsubscribeNotes = supabaseClient
-        .channel(`board-${board_id}`)
-        .on(
-            'postgres_changes',
-            {
-                event: '*',
-                schema: 'public',
-                table: 'notes',
-                filter: `board_id=eq.${board_id}`
-            },
-            (payload) => {
-                console.log('Realtime change received:', payload.eventType, payload);
-                
-                if (payload.eventType === 'INSERT') {
-                    console.log('Adding note via real-time:', payload.new.id);
-                    addNoteToBoard(payload.new);
-                }
-                if (payload.eventType === 'UPDATE') {
-                    console.log('Updating note via real-time:', payload.new.id);
-                    updateNoteOnBoard(payload.new);
-                }
-                if (payload.eventType === 'DELETE') {
-                    console.log('Removing note via real-time:', payload.old.id);
-                    removeNoteFromBoard(payload.old.id);
-                }
-            }
-        )
-        .subscribe((status) => {
-            console.log('Realtime subscription status:', status);
-            if (status === 'SUBSCRIBED') {
-                console.log('Successfully subscribed to real-time updates');
-            }
-        });
-}
-                
         function showBoardSelection() {
             // Unsubscribe from notes listener
             if (unsubscribeNotes) {
