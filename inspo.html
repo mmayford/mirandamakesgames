@@ -807,7 +807,7 @@
                 loadBoardNotes(board_id);
                 
                 // Set up real-time listener for this board's notes
-                setupRealtimeListener(board_id);
+                //setupRealtimeListener(board_id);
                 
             } catch (error) {
                 console.error("Error opening board: ", error);
@@ -1235,7 +1235,7 @@ function setupRealtimeListener(board_id) {
                     
                     console.log("Text note added successfully");
                     document.getElementById('text-note').value = '';
-                    // DON'T call addNoteToBoard here - let real-time handle it
+                    addNoteToBoard(newNote);
                 } catch (error) {
                     console.error("Error adding text note:", error);
                 }
@@ -1278,7 +1278,7 @@ function setupRealtimeListener(board_id) {
                     }
                     
                     console.log("Image note added successfully");
-                    // DON'T call addNoteToBoard here - let real-time handle it
+                    addNoteToBoard(newNote);
                     
                 } catch (error) {
                     console.error("Error adding image note:", error);
@@ -1327,6 +1327,9 @@ function setupRealtimeListener(board_id) {
                             
                             if (error) {
                                 console.error("Error updating note text:", error);
+                            }
+                            else{
+                                textElement.textContent = newText; //Update UI
                             }
                         } catch (error) {
                             console.error("Error updating note text:", error);
