@@ -839,7 +839,7 @@
               unsubscribeNotes.unsubscribe(); // remove previous listener if any
             }
             
-            const channel = supabase.channel(`board-${boardId}`)
+            const channel = supabaseClient.channel(`board-${boardId}`)
               .on(
                 'postgres_changes',
                 {
