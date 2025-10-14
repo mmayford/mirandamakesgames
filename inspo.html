@@ -476,6 +476,14 @@
         </div>
     </div>
 
+    <div class="corkboard-container" id="corkboard-container" style="display: none;">
+        <div class="corkboard-frame">
+            <div id="corkboard">
+                <!-- Notes and images will appear here -->
+            </div>
+        </div>
+    </div>
+
     <div id="upload-container" style="display: none;">
         <input type="text" id="text-note" placeholder="Write your note...">
         <div class="color-picker">
@@ -509,7 +517,7 @@
         let unsubscribeNotes = null;
         let scrollY = 0;
 
-        // DOM elements
+       // DOM elements
         const corkboard = document.getElementById('corkboard');
         const loadingElement = document.getElementById('loading');
         const instructions = document.getElementById('instructions');
@@ -573,11 +581,13 @@
 
         async function initApp() {
             try {
-                console.log("Initializing Supabase...");
+                console.log("Initializing Firebase...");
                 
-                // Generate a random user ID for anonymous usage
-                currentUser = { id: generateUserId() };
-                console.log("Generated user ID:", currentUser.id);
+                // Sign in anonymously
+                console.log("Attempting anonymous sign-in...");
+                const cred = await auth.signInAnonymously();
+                currentUser = auth.currentUser;
+                console.log("Signed in successfully. User ID:", currentUser.uid);
                 
                 // Load boards
                 loadBoards();
@@ -590,49 +600,28 @@
             }
         }
         
-        // Generate a unique user ID for anonymous users
-        function generateUserId() {
-            // Try to get existing user ID from localStorage
-            let userId = localStorage.getItem('corkboard_user_id');
-            if (!userId) {
-                // Generate a new ID if none exists
-                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('corkboard_user_id', userId);
-            }
-            return userId;
-        }
-        
-        async function loadBoards() {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('boards')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-                
-                if (error) {
-                    console.error("Error loading boards:", error);
-                    return;
-                }
-                
+        function loadBoards() {
+            db.collection("boards").get().then(querySnapshot => {
                 boardsList.innerHTML = '';
-                if (!data || data.length === 0) {
+                if (querySnapshot.empty) {
                     boardsList.innerHTML = '<p style="color: white;">No boards yet. Create the first one!</p>';
                     createBoardBtn.style.display = 'block'; // Show create button if no boards
                 } else {
-                    data.forEach(board => {
+                    querySnapshot.forEach(doc => {
+                        const boardData = doc.data();
                         const boardItem = document.createElement('div');
                         boardItem.className = 'board-item';
-                        boardItem.dataset.boardId = board.id;
+                        boardItem.dataset.boardId = doc.id;
                         
-                        let actionsHtml = `<button class="open-board" data-id="${board.id}">Open</button>`;
+                        let actionsHtml = `<button class="open-board" data-id="${doc.id}">Open</button>`;
                         
                         // Only show delete button for boards created by current user
-                        if (board.created_by === currentUser.id) {
-                            actionsHtml += `<button class="delete-board" data-id="${board.id}">Delete</button>`;
+                        if (boardData.createdBy === currentUser.uid) {
+                            actionsHtml += `<button class="delete-board" data-id="${doc.id}">Delete</button>`;
                         }
                         
                         boardItem.innerHTML = `
-                            <h3 class="board-name">${board.name}</h3>
+                            <h3 class="board-name">${boardData.name}</h3>
                             <div class="board-actions">
                                 ${actionsHtml}
                             </div>
@@ -640,13 +629,13 @@
                         boardsList.appendChild(boardItem);
                         
                         // Add double-click event for renaming (only for creator)
-                        if (board.created_by === currentUser.id) {
+                        if (boardData.createdBy === currentUser.uid) {
                             const boardNameElement = boardItem.querySelector('.board-name');
                             boardNameElement.addEventListener('dblclick', function(e) {
                                 e.stopPropagation();
-                                const newName = prompt("Enter new name for this board:", board.name);
+                                const newName = prompt("Enter new name for this board:", boardData.name);
                                 if (newName && newName.trim() !== "") {
-                                    renameBoard(board.id, newName.trim());
+                                    renameBoard(doc.id, newName.trim());
                                 }
                             });
                         }
@@ -669,293 +658,193 @@
                         });
                     });
                 }
-            } catch (error) {
+            }).catch(error => {
                 console.error("Error loading boards:", error);
-            }
+            });
         }
         
-        async function createNewBoard(name) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('boards')
-                    .insert([
-                        { 
-                            name: name,
-                            created_by: currentUser.id
-                        }
-                    ])
-                    .select();
-                
-                if (error) {
+        function createNewBoard(name) {
+            const newBoard = {
+                name: name,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.uid
+            };
+            
+            db.collection("boards").add(newBoard)
+                .then((docRef) => {
+                    console.log("Board created with ID: ", docRef.id);
+                    newBoardNameInput.value = '';
+                    createBoardForm.style.display = 'none';
+                    createBoardBtn.style.display = 'block'; // Show create button again
+                    openBoard(docRef.id);
+                })
+                .catch(error => {
                     console.error("Error creating board: ", error);
-                    return;
-                }
-                
-                console.log("Board created with ID: ", data[0].id);
-                newBoardNameInput.value = '';
-                createBoardForm.style.display = 'none';
-                createBoardBtn.style.display = 'block'; // Show create button again
-                openBoard(data[0].id);
-            } catch (error) {
-                console.error("Error creating board: ", error);
-            }
+                });
         }
         
-        async function renameBoard(boardId, newName) {
-            try {
-                const { error } = await supabaseClient
-                    .from('boards')
-                    .update({ name: newName })
-                    .eq('id', boardId);
-                
-                if (error) {
-                    console.error("Error renaming board: ", error);
-                    alert("Error renaming board. Only the board creator can rename it.");
-                    return;
-                }
-                
+        function renameBoard(boardId, newName) {
+            db.collection("boards").doc(boardId).update({
+                name: newName
+            })
+            .then(() => {
                 console.log("Board renamed successfully");
                 currentBoardName = newName;
                 currentBoardNameSpan.textContent = newName;
                 
                 // Update the board name in the selection list too
                 loadBoards();
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error("Error renaming board: ", error);
                 alert("Error renaming board. Only the board creator can rename it.");
-            }
+            });
         }
         
-        async function deleteBoard(boardId) {
-            try {
-                // First delete all notes in this board
-                const { error: notesError } = await supabaseClient
-                    .from('notes')
-                    .delete()
-                    .eq('board_id', boardId);
-                
-                if (notesError) {
-                    console.error("Error deleting notes: ", notesError);
-                    return;
-                }
-                
-                // Then delete the board itself
-                const { error: boardError } = await supabaseClient
-                    .from('boards')
-                    .delete()
-                    .eq('id', boardId);
-                
-                if (boardError) {
-                    console.error("Error deleting board: ", boardError);
+        function deleteBoard(boardId) {
+            // First delete all notes in this board
+            db.collection("notes")
+                .where("boardId", "==", boardId)
+                .get()
+                .then(querySnapshot => {
+                    const deletePromises = [];
+                    querySnapshot.forEach(doc => {
+                        deletePromises.push(doc.ref.delete());
+                    });
+                    
+                    return Promise.all(deletePromises);
+                })
+                .then(() => {
+                    // Then delete the board itself
+                    return db.collection("boards").doc(boardId).delete();
+                })
+                .then(() => {
+                    console.log("Board deleted successfully");
+                    loadBoards();
+                })
+                .catch(error => {
+                    console.error("Error deleting board: ", error);
                     alert("Error deleting board. Only the board creator can delete it.");
-                    return;
-                }
-                
-                console.log("Board deleted successfully");
-                loadBoards();
-            } catch (error) {
-                console.error("Error deleting board: ", error);
-                alert("Error deleting board. Only the board creator can delete it.");
-            }
-        }
-        
-      async function openBoard(boardId) {
-        currentBoardId = boardId;
-        
-        try {
-            // Get board name
-            const { data, error } = await supabaseClient
-                .from('boards')
-                .select('*')
-                .eq('id', boardId)
-                .single();
-            
-            if (error) {
-                console.error("Error getting board: ", error);
-                return;
-            }
-            
-            currentBoardName = data.name;
-            currentBoardCreator = data.created_by;
-            currentBoardNameSpan.textContent = currentBoardName;
-            
-            // Show rename button only if current user created this board
-            if (currentBoardCreator === currentUser.id) {
-                renameBoardBtn.style.display = 'block';
-            } else {
-                renameBoardBtn.style.display = 'none';
-            }
-            
-            // Show the board UI
-            boardSelection.style.display = 'none';
-            corkboardContainer.style.display = 'block';
-            boardHeader.style.display = 'flex';
-            uploadContainer.style.display = 'flex';
-            
-            // Clear existing notes
-            corkboard.innerHTML = '';
-            
-            // Load existing notes for this board
-            await loadBoardNotes(boardId);
-            
-            // Set up real-time listener for this board's notes (LIKE FIREBASE)
-            setupRealtimeListener(boardId);
-            
-        } catch (error) {
-            console.error("Error opening board: ", error);
-        }
-    }
-       function setupRealtimeListener(boardId) {
-    console.log("Setting up real-time listener for board:", boardId);
-    
-    // Remove previous subscription if exists (Like Firebase unsubscribe)
-    if (unsubscribeNotes) {
-        console.log("Removing previous subscription");
-        supabaseClient.removeChannel(unsubscribeNotes);
-    }
-    
-    // Subscribe to changes (Like Firebase onSnapshot)
-    unsubscribeNotes = supabaseClient
-        .channel('notes-changes')
-        .on(
-            'postgres_changes',
-            {
-                event: '*', // INSERT, UPDATE, DELETE
-                schema: 'public',
-                table: 'notes',
-                filter: `board_id=eq.${boardId}`
-            },
-            (payload) => {
-                console.log('Real-time change received:', payload);
-                
-                // Handle different event types like Firebase
-                if (payload.eventType === 'INSERT') {
-                    console.log('New note added:', payload.new);
-                    addNoteToBoard(payload.new);
-                }
-                if (payload.eventType === 'UPDATE') {
-                    console.log('Note updated:', payload.new);
-                    updateNoteOnBoard(payload.new);
-                }
-                if (payload.eventType === 'DELETE') {
-                    console.log('Note deleted:', payload.old);
-                    removeNoteFromBoard(payload.old.id);
-                }
-            }
-        )
-        .subscribe((status) => {
-            console.log('Subscription status:', status);
-            if (status === 'SUBSCRIBED') {
-                console.log('Successfully subscribed to real-time updates');
-            }
-        });
-}
-        
-        async function loadBoardNotes(boardId) {
-            try {
-                const { data, error } = await supabaseClient
-                    .from('notes')
-                    .select('*')
-                    .eq('board_id', boardId);
-                
-                if (error) {
-                    console.error("Error loading notes: ", error);
-                    return;
-                }
-                
-                data.forEach(note => {
-                    addNoteToBoard(note);
                 });
-            } catch (error) {
-                console.error("Error loading notes: ", error);
-            }
         }
         
-        function setupRealtimeListener(boardId) {
-            // Remove previous subscription if exists
+        function openBoard(boardId) {
+            currentBoardId = boardId;
+            
+            // Get board name
+            db.collection("boards").doc(boardId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const boardData = doc.data();
+                        currentBoardName = boardData.name;
+                        currentBoardCreator = boardData.createdBy;
+                        currentBoardNameSpan.textContent = currentBoardName;
+                        
+                        // Show rename button only if current user created this board
+                        if (currentBoardCreator === currentUser.uid) {
+                            renameBoardBtn.style.display = 'block';
+                        } else {
+                            renameBoardBtn.style.display = 'none';
+                        }
+                        
+                        // Show the board UI
+                        boardSelection.style.display = 'none';
+                        corkboardContainer.style.display = 'block';
+                        boardHeader.style.display = 'flex';
+                        uploadContainer.style.display = 'flex';
+                        
+                        // Clear existing notes
+                        corkboard.innerHTML = '';
+                        
+                        // Set up real-time listener for this board's notes
+                        if (unsubscribeNotes) {
+                            unsubscribeNotes(); // Remove previous listener if any
+                        }
+                        
+                        unsubscribeNotes = db.collection("notes")
+                            .where("boardId", "==", boardId)
+                            .onSnapshot(snapshot => {
+                                console.log("Received snapshot with", snapshot.docs.length, "notes");
+                                snapshot.docChanges().forEach(change => {
+                                    if (change.type === "added") {
+                                        addNoteToBoard(change.doc.data());
+                                    }
+                                    if (change.type === "modified") {
+                                        updateNoteOnBoard(change.doc.data());
+                                    }
+                                    if (change.type === "removed") {
+                                        removeNoteFromBoard(change.doc.id);
+                                    }
+                                });
+                            }, error => {
+                                console.error("Firestore listener error:", error);
+                            });
+                    } else {
+                        console.error("Board not found");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error getting board: ", error);
+                });
+        }
+        
+        function showBoardSelection() {
+            // Unsubscribe from notes listener
             if (unsubscribeNotes) {
-                supabaseClient.removeChannel(unsubscribeNotes);
+                unsubscribeNotes();
+                unsubscribeNotes = null;
             }
             
-            // Subscribe to changes in the notes table for this board
-            unsubscribeNotes = supabaseClient
-                .channel('notes-changes')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'notes',
-                        filter: `board_id=eq.${boardId}`
-                    },
-                    (payload) => {
-                        console.log('Change received!', payload);
-                        
-                        if (payload.eventType === 'INSERT') {
-                            addNoteToBoard(payload.new);
-                        }
-                        if (payload.eventType === 'UPDATE') {
-                            updateNoteOnBoard(payload.new);
-                        }
-                        if (payload.eventType === 'DELETE') {
-                            removeNoteFromBoard(payload.old.id);
-                        }
-                    }
-                )
-                .subscribe();
+            // Hide board UI and show selection
+            corkboardContainer.style.display = 'none';
+            boardHeader.style.display = 'none';
+            uploadContainer.style.display = 'none';
+            boardSelection.style.display = 'flex';
+            
+            // Reset scroll position
+            corkboardContainer.scrollTop = 0;
+            
+            // Reload boards
+            loadBoards();
         }
         
-function showBoardSelection() {
-    // Unsubscribe from notes listener (LIKE FIREBASE unsubscribe)
-    if (unsubscribeNotes) {
-        console.log("Unsubscribing from real-time updates");
-        supabaseClient.removeChannel(unsubscribeNotes);
-        unsubscribeNotes = null;
-    }
-    
-    // Hide board UI and show selection
-    corkboardContainer.style.display = 'none';
-    boardHeader.style.display = 'none';
-    uploadContainer.style.display = 'none';
-    boardSelection.style.display = 'flex';
-    
-    // Reset scroll position
-    corkboardContainer.scrollTop = 0;
-    
-    // Reload boards
-    loadBoards();
-}
-        
-        // Upload image to Supabase Storage
-        async function uploadImage(file) {
-            try {
-                // Generate a unique file name
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
-                const filePath = `images/${fileName}`;
-                
-                // Upload the image to Supabase Storage
-                const { data, error } = await supabaseClient
-                    .storage
-                    .from('corkboard-images') // Replace with your bucket name
-                    .upload(filePath, file);
-                
-                if (error) {
-                    console.error("Error uploading image: ", error);
-                    throw error;
-                }
-                
-                // Get the public URL for the uploaded image
-                const { data: { publicUrl } } = supabaseClient
-                    .storage
-                    .from('corkboard-images')
-                    .getPublicUrl(filePath);
-                
-                return publicUrl;
-            } catch (error) {
-                console.error("Error in uploadImage: ", error);
-                throw error;
-            }
+        // Add this function to compress images
+        function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        // Calculate new dimensions
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width *= maxHeight / height;
+                                height = maxHeight;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Convert to compressed data URL
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
         }
         
         function addNoteToBoard(noteData) {
@@ -970,7 +859,7 @@ function showBoardSelection() {
             noteContainer.style.width = (noteData.width || 200) + 'px';
             noteContainer.style.height = (noteData.height || 200) + 'px';
             noteContainer.dataset.noteId = noteData.id;
-            noteContainer.style.zIndex = noteData.z_index || highestZIndex++;
+            noteContainer.style.zIndex = noteData.zIndex || highestZIndex++;
             
             // Create pin
             const pin = document.createElement('div');
@@ -1017,7 +906,7 @@ function showBoardSelection() {
             const rotation = noteData.rotation || (Math.random() * 4 - 2);
             noteContainer.style.transform = `rotate(${rotation}deg)`;
             
-            if (noteData.user_id === currentUser.id) {
+            if (noteData.userId === currentUser.uid) {
                 noteElement.classList.add('mine');
                 
                 // Add delete button for user's own notes
@@ -1027,7 +916,9 @@ function showBoardSelection() {
                 deleteBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     if (confirm('Delete this note?')) {
-                        deleteNote(noteData.id);
+                        db.collection("notes").doc(noteData.id).delete().catch(error => {
+                            console.error("Error deleting note:", error);
+                        });
                     }
                 });
                 noteElement.appendChild(deleteBtn);
@@ -1055,23 +946,16 @@ function showBoardSelection() {
             corkboard.appendChild(noteContainer);
         }
 
-        async function bringToFront(element, noteId) {
+        function bringToFront(element, noteId) {
             highestZIndex++;
             element.style.zIndex = highestZIndex;
             
             // Update z-index in database
-            try {
-                const { error } = await supabaseClient
-                    .from('notes')
-                    .update({ z_index: highestZIndex })
-                    .eq('id', noteId);
-                
-                if (error) {
-                    console.error("Error updating z-index:", error);
-                }
-            } catch (error) {
+            db.collection("notes").doc(noteId).update({
+                zIndex: highestZIndex
+            }).catch(error => {
                 console.error("Error updating z-index:", error);
-            }
+            });
         }
 
         function updateNoteOnBoard(noteData) {
@@ -1085,10 +969,10 @@ function showBoardSelection() {
                     noteContainer.style.height = noteData.height + 'px';
                 }
                 
-                if (noteData.z_index) {
-                    noteContainer.style.zIndex = noteData.z_index;
-                    if (noteData.z_index > highestZIndex) {
-                        highestZIndex = noteData.z_index;
+                if (noteData.zIndex) {
+                    noteContainer.style.zIndex = noteData.zIndex;
+                    if (noteData.zIndex > highestZIndex) {
+                        highestZIndex = noteData.zIndex;
                     }
                 }
                 
@@ -1103,8 +987,6 @@ function showBoardSelection() {
             const noteContainer = document.querySelector(`[data-note-id="${noteId}"]`);
             if (noteContainer) noteContainer.remove();
         }
-
-// ... all your previous code remains the same until the makeDraggable function ...
 
         function makeDraggable(element, noteId) {
             let isDragging = false;
@@ -1148,32 +1030,21 @@ function showBoardSelection() {
                 element.style.top = newY + 'px';
             });
             
-            document.addEventListener('mouseup', async function() {
+            document.addEventListener('mouseup', function() {
                 if (isDragging) {
                     isDragging = false;
                     
-                    // Update position in database (LIKE FIREBASE)
-                    try {
-                        const { error } = await supabaseClient
-                            .from('notes')
-                            .update({
-                                x: parseInt(element.style.left),
-                                y: parseInt(element.style.top),
-                                z_index: parseInt(element.style.zIndex)
-                            })
-                            .eq('id', noteId);
-                        
-                        if (error) {
-                            console.error("Error updating note position:", error);
-                        } else {
-                            console.log("Note position updated successfully");
-                        }
-                    } catch (error) {
+                    // Update position in database
+                    db.collection("notes").doc(noteId).update({
+                        x: parseInt(element.style.left),
+                        y: parseInt(element.style.top),
+                        zIndex: parseInt(element.style.zIndex)
+                    }).catch(error => {
                         console.error("Error updating note position:", error);
-                    }
+                    });
                 }
             });
-        } // <-- THIS WAS MISSING
+        }
 
         function makeResizable(element, noteId) {
             let isResizing = false;
@@ -1212,77 +1083,50 @@ function showBoardSelection() {
                 element.style.height = newHeight + 'px';
             });
             
-            document.addEventListener('mouseup', async function() {
+            document.addEventListener('mouseup', function() {
                 if (isResizing) {
                     isResizing = false;
                     
-                    // Update size in database (LIKE FIREBASE)
-                    try {
-                        const { error } = await supabaseClient
-                            .from('notes')
-                            .update({
-                                width: parseInt(element.style.width),
-                                height: parseInt(element.style.height),
-                                z_index: parseInt(element.style.zIndex)
-                            })
-                            .eq('id', noteId);
-                        
-                        if (error) {
-                            console.error("Error updating note size:", error);
-                        } else {
-                            console.log("Note size updated successfully");
-                        }
-                    } catch (error) {
+                    // Update size in database
+                    db.collection("notes").doc(noteId).update({
+                        width: parseInt(element.style.width),
+                        height: parseInt(element.style.height),
+                        zIndex: parseInt(element.style.zIndex)
+                    }).catch(error => {
                         console.error("Error updating note size:", error);
-                    }
+                    });
                 }
             });
-        } // <-- THIS WAS MISSING
+        }
 
         // Add text note
-        document.getElementById('add-text').addEventListener('click', async function() {
+        document.getElementById('add-text').addEventListener('click', function() {
             const text = document.getElementById('text-note').value;
             if (text.trim()) {
-                console.log("currentBoardId:", currentBoardId);
-                console.log("currentBoardId type:", typeof currentBoardId);
-                console.log("currentUser.id:", currentUser.id);
-                
-                // Test if it's a valid UUID format
-                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                console.log("Is valid UUID?", uuidRegex.test(currentBoardId));
-                
                 const newNote = {
                     id: 'note_' + Date.now(),
                     type: 'text',
                     content: text,
-                    x: 100,
-                    y: 100,
+                    x: Math.random() * (corkboardContainer.offsetWidth - 200),
+                    y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                     width: 200,
                     height: 200,
-                    user_id: currentUser.id,
-                    board_id: currentBoardId,
+                    userId: currentUser.uid,
+                    boardId: currentBoardId,
                     color: selectedColor,
-                    rotation: 0,
-                    z_index: highestZIndex++
+                    rotation: Math.random() * 4 - 2,
+                    zIndex: highestZIndex++,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
-                console.log("Full note object:", newNote);
-                
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('notes')
-                        .insert([newNote]);
-                    
-                    if (error) {
-                        console.error("Supabase error:", error);
-                        return;
-                    }
-                    
-                    console.log("Success!", data);
-                    document.getElementById('text-note').value = '';
-                } catch (error) {
-                    console.error("Unexpected error:", error);
-                }
+                db.collection("notes").doc(newNote.id).set(newNote)
+                    .then(() => {
+                        console.log("Text note added successfully");
+                        document.getElementById('text-note').value = '';
+                    })
+                    .catch(error => {
+                        console.error("Error adding text note:", error);
+                    });
             }
         });
 
@@ -1294,33 +1138,26 @@ function showBoardSelection() {
         document.getElementById('image-upload').addEventListener('change', async function() {
             if (this.files && this.files[0]) {
                 try {
-                    // Upload the image to Supabase Storage
-                    const imageUrl = await uploadImage(this.files[0]);
+                    // Compress the image first
+                    const compressedDataUrl = await compressImage(this.files[0]);
                     
                     const newNote = {
                         id: 'note_' + Date.now(),
                         type: 'image',
-                        content: imageUrl,
-                        x: Math.random() * (corkboardContainer.offsetWidth - 200),
+                        content: compressedDataUrl, // Use compressed image
+                         x: Math.random() * (corkboardContainer.offsetWidth - 200),
                         y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                         width: 200,
                         height: 200,
-                        user_id: currentUser.id,
-                        board_id: currentBoardId,
+                        userId: currentUser.uid,
+                        boardId: currentBoardId,
                         rotation: Math.random() * 4 - 2,
-                        z_index: highestZIndex++
+                        zIndex: highestZIndex++,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     
-                    // Save to Supabase
-                    const { error } = await supabaseClient
-                        .from('notes')
-                        .insert([newNote]);
-                    
-                    if (error) {
-                        console.error("Error adding image note:", error);
-                        return;
-                    }
-                    
+                    // Save to Firebase
+                    await db.collection("notes").doc(newNote.id).set(newNote);
                     console.log("Image note added successfully");
                     
                 } catch (error) {
@@ -1330,24 +1167,8 @@ function showBoardSelection() {
             }
         });
 
-        // Delete a note
-        async function deleteNote(noteId) {
-            try {
-                const { error } = await supabaseClient
-                    .from('notes')
-                    .delete()
-                    .eq('id', noteId);
-                
-                if (error) {
-                    console.error("Error deleting note:", error);
-                }
-            } catch (error) {
-                console.error("Error deleting note:", error);
-            }
-        }
-
         // Double-click to edit text notes
-        document.addEventListener('dblclick', async function(e) {
+        document.addEventListener('dblclick', function(e) {
             if (e.target.classList.contains('note-text')) {
                 const textElement = e.target;
                 const noteContainer = textElement.closest('.note-container');
@@ -1358,20 +1179,11 @@ function showBoardSelection() {
                     const newText = prompt('Edit your note:', currentText);
                     
                     if (newText !== null) {
-                        try {
-                            const { error } = await supabaseClient
-                                .from('notes')
-                                .update({ content: newText })
-                                .eq('id', noteId);
-                            
-                            if (error) {
-                                console.error("Error updating note text:", error);
-                            } else {
-                                console.log("Note text updated successfully");
-                            }
-                        } catch (error) {
+                        db.collection("notes").doc(noteId).update({
+                            content: newText
+                        }).catch(error => {
                             console.error("Error updating note text:", error);
-                        }
+                        });
                     }
                 }
             }
@@ -1386,7 +1198,7 @@ function showBoardSelection() {
                 this.classList.add('active');
                 selectedColor = this.getAttribute('data-color');
             });
-        }); // <-- THIS WAS MISSING
+        });
     </script>
 </body>
 </html>
