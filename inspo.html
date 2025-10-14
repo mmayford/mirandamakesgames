@@ -1074,6 +1074,7 @@ function setupRealtimeListener(board_id) {
         function removeNoteFromBoard(noteId) {
             const noteContainer = document.querySelector(`[data-note-id="${noteId}"]`);
             if (noteContainer) noteContainer.remove();
+            else console.log('note container not found, UI cant update!');
         }
 
         function makeDraggable(element, noteId) {
