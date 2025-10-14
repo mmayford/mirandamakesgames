@@ -1105,7 +1105,8 @@
         document.addEventListener('mouseup', async function() {
             if (isDragging) {
                 isDragging = false;
-        
+
+                console.log("Updating note:", { noteId, type: typeof noteId });
                 console.log('Saving position:', element.style.left, element.style.top);
                 console.log("noteId being updated:", noteId);
         
