@@ -1104,7 +1104,9 @@
             document.addEventListener('mouseup', async function() {
                 if (isDragging) {
                     isDragging = false;
-                    
+
+                    console.log('Saving position:', element.style.left, element.style.top);
+
                     // Update position in database
                     try {
                         const { error } = await supabaseClient
