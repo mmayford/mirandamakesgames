@@ -836,7 +836,7 @@
         
         function setupRealtimeListener(board_id) {
             if (unsubscribeNotes) {
-              unsubscribeNotes.unsubscribe(); // remove previous listener if any
+              unsubscribeNotes.unsubscribe();
             }
             
             const channel = supabaseClient.channel(`board-${board_id}`)
@@ -851,16 +851,25 @@
                 (payload) => {
                   console.log('Realtime change received:', payload);
             
-                  if (payload.eventType === 'INSERT') addNoteToBoard(payload.new);
-                  if (payload.eventType === 'UPDATE') updateNoteOnBoard(payload.new);
-                  if (payload.eventType === 'DELETE') removeNoteFromBoard(payload.old.id);
+                  if (payload.eventType === 'INSERT') {
+                      console.log('Adding note via real-time:', payload.new.id);
+                      addNoteToBoard(payload.new);
+                  }
+                  if (payload.eventType === 'UPDATE') {
+                      console.log('Updating note via real-time:', payload.new.id);
+                      updateNoteOnBoard(payload.new);
+                  }
+                  if (payload.eventType === 'DELETE') {
+                      console.log('Removing note via real-time:', payload.old.id);
+                      removeNoteFromBoard(payload.old.id);
+                  }
                 }
               )
               .subscribe();
             
-            unsubscribeNotes = channel; // store reference to unsubscribe later
+            unsubscribeNotes = channel;
         }
-        
+                
         function showBoardSelection() {
             // Unsubscribe from notes listener
             if (unsubscribeNotes) {
@@ -1105,11 +1114,7 @@
         document.addEventListener('mouseup', async function() {
             if (isDragging) {
                 isDragging = false;
-
-                console.log("Updating note:", { noteId, type: typeof noteId });
-                console.log('Saving position:', element.style.left, element.style.top);
-                console.log("noteId being updated:", noteId);
-        
+                
                 try {
                     const { data, error } = await supabaseClient
                         .from('notes')
@@ -1120,8 +1125,7 @@
                         })
                         .eq('id', noteId)
                         .select(); // Add this to see what it actually updated
-        
-                    console.log('Supabase update result:', { data, error });
+    
                 } catch (err) {
                     console.error('Caught exception:', err);
                 }
@@ -1222,6 +1226,7 @@
                     
                     console.log("Text note added successfully");
                     document.getElementById('text-note').value = '';
+                    // DON'T call addNoteToBoard here - let real-time handle it
                 } catch (error) {
                     console.error("Error adding text note:", error);
                 }
@@ -1264,6 +1269,7 @@
                     }
                     
                     console.log("Image note added successfully");
+                    // DON'T call addNoteToBoard here - let real-time handle it
                     
                 } catch (error) {
                     console.error("Error adding image note:", error);
@@ -1283,11 +1289,12 @@
                 if (error) {
                     console.error("Error deleting note:", error);
                 }
+                // DON'T call removeNoteFromBoard here - let real-time handle it
             } catch (error) {
                 console.error("Error deleting note:", error);
             }
         }
-
+        
         // Double-click to edit text notes
         document.addEventListener('dblclick', async function(e) {
             if (e.target.classList.contains('note-text')) {
