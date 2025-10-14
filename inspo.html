@@ -1107,6 +1107,7 @@
                 isDragging = false;
         
                 console.log('Saving position:', element.style.left, element.style.top);
+                console.log("noteId being updated:", noteId);
         
                 try {
                     const { data, error } = await supabaseClient
