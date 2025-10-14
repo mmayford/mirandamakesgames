@@ -806,45 +806,6 @@
             loadBoards();
         }
         
-        // Add this function to compress images
-        function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        // Calculate new dimensions
-                        if (width > height) {
-                            if (width > maxWidth) {
-                                height *= maxWidth / width;
-                                width = maxWidth;
-                            }
-                        } else {
-                            if (height > maxHeight) {
-                                width *= maxHeight / height;
-                                height = maxHeight;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        // Convert to compressed data URL
-                        resolve(canvas.toDataURL('image/jpeg', quality));
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-        
         function addNoteToBoard(noteData) {
             // Check if note already exists
             if (document.querySelector(`[data-note-id="${noteData.id}"]`)) return;
@@ -1136,14 +1097,13 @@
         document.getElementById('image-upload').addEventListener('change', async function() {
             if (this.files && this.files[0]) {
                 try {
-                    // Compress the image first
-                    const compressedDataUrl = await compressImage(this.files[0]);
+                    const imageUrl = await uploadImage(this.files[0]);
                     
                     const newNote = {
                         id: 'note_' + Date.now(),
                         type: 'image',
-                        content: compressedDataUrl, // Use compressed image
-                         x: Math.random() * (corkboardContainer.offsetWidth - 200),
+                        content: imageUrl,
+                        x: Math.random() * (corkboardContainer.offsetWidth - 200),
                         y: Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY,
                         width: 200,
                         height: 200,
@@ -1154,8 +1114,16 @@
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     
-                    // Save to Firebase
-                    await db.collection("notes").doc(newNote.id).set(newNote);
+                    // Save to Supabase
+                    const { error } = await supabaseClient
+                        .from('notes')
+                        .insert([newNote]);
+                    
+                    if (error) {
+                        console.error("Error adding image note:", error);
+                        return;
+                    }
+                    
                     console.log("Image note added successfully");
                     
                 } catch (error) {
