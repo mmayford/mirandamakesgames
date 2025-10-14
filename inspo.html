@@ -1101,31 +1101,30 @@
                 element.style.top = newY + 'px';
             });
             
-            document.addEventListener('mouseup', async function() {
-                if (isDragging) {
-                    isDragging = false;
-
-                    console.log('Saving position:', element.style.left, element.style.top);
-
-                    // Update position in database
-                    try {
-                        const { error } = await supabaseClient
-                            .from('notes')
-                            .update({
-                                x: parseInt(element.style.left),
-                                y: parseInt(element.style.top),
-                                z_index: parseInt(element.style.zIndex)
-                            })
-                            .eq('id', noteId);
-                        
-                        if (error) {
-                            console.error("Error updating note position:", error);
-                        }
-                    } catch (error) {
-                        console.error("Error updating note position:", error);
-                    }
+   
+        document.addEventListener('mouseup', async function() {
+            if (isDragging) {
+                isDragging = false;
+        
+                console.log('Saving position:', element.style.left, element.style.top);
+        
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('notes')
+                        .update({
+                            x: parseInt(element.style.left),
+                            y: parseInt(element.style.top),
+                            z_index: parseInt(element.style.zIndex)
+                        })
+                        .eq('id', noteId)
+                        .select(); // Add this to see what it actually updated
+        
+                    console.log('Supabase update result:', { data, error });
+                } catch (err) {
+                    console.error('Caught exception:', err);
                 }
-            });
+            }
+        });
         }
 
         function makeResizable(element, noteId) {
