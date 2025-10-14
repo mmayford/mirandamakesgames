@@ -505,7 +505,6 @@
         
         // Initialize Supabase client
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const auth = supabase.auth();
 
         // User and notes variables
         let currentUser = null;
@@ -580,15 +579,13 @@
             scrollY = this.scrollTop;
         });
 
-    async function initApp() {
+        async function initApp() {
             try {
                 console.log("Initializing Supabase...");
                 
-                // Sign in anonymously
-                console.log("Attempting anonymous sign-in...");
-                const cred = await auth.signInAnonymously();
-                currentUser = auth.currentUser;
-                console.log("Signed in successfully. User ID:", currentUser.uid);
+                // Generate a random user ID for anonymous usage
+                currentUser = { id: generateUserId() };
+                console.log("Generated user ID:", currentUser.id);
                 
                 // Load boards
                 loadBoards();
@@ -601,6 +598,17 @@
             }
         }
         
+        // Generate a unique user ID for anonymous users
+        function generateUserId() {
+            // Try to get existing user ID from localStorage
+            let userId = localStorage.getItem('corkboard_user_id');
+            if (!userId) {
+                // Generate a new ID if none exists
+                userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('corkboard_user_id', userId);
+            }
+            return userId;
+        }
         function loadBoards() {
             db.collection("boards").get().then(querySnapshot => {
                 boardsList.innerHTML = '';
