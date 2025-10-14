@@ -583,9 +583,11 @@
             try {
                 console.log("Initializing Supabase...");
                 
-                // Generate a random user ID for anonymous usage
-                currentUser = { id: generateUserId() };
-                console.log("Generated user ID:", currentUser.id);
+                // Sign in anonymously
+                console.log("Attempting anonymous sign-in...");
+                const cred = await auth.signInAnonymously();
+                currentUser = auth.currentUser;
+                console.log("Signed in successfully. User ID:", currentUser.uid);
                 
                 // Load boards
                 loadBoards();
