@@ -579,15 +579,13 @@
             scrollY = this.scrollTop;
         });
 
-        async function initApp() {
+    async function initApp() {
             try {
-                console.log("Initializing Firebase...");
+                console.log("Initializing Supabase...");
                 
-                // Sign in anonymously
-                console.log("Attempting anonymous sign-in...");
-                const cred = await auth.signInAnonymously();
-                currentUser = auth.currentUser;
-                console.log("Signed in successfully. User ID:", currentUser.uid);
+                // Generate a random user ID for anonymous usage
+                currentUser = { id: generateUserId() };
+                console.log("Generated user ID:", currentUser.id);
                 
                 // Load boards
                 loadBoards();
