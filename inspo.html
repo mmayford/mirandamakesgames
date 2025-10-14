@@ -505,7 +505,8 @@
         
         // Initialize Supabase client
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
+        const auth = supabase.auth();
+
         // User and notes variables
         let currentUser = null;
         let notes = [];
