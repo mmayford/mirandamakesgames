@@ -835,20 +835,30 @@
         }
         
         function setupRealtimeListener(boardId) {
-            // Remove previous subscription if exists
             if (unsubscribeNotes) {
-                supabaseClient.removeChannel(unsubscribeNotes);
+              unsubscribeNotes.unsubscribe(); // remove previous listener if any
             }
             
-            // Subscribe to changes in the notes table for this board
+            const channel = supabase.channel(`board-${boardId}`)
+              .on(
+                'postgres_changes',
+                {
+                  event: '*',
+                  schema: 'public',
+                  table: 'notes',
+                  filter: `board_id=eq.${boardId}`
+                },
+                (payload) => {
+                  console.log('Realtime change received:', payload);
             
-        const channel = supabase.channel(`board-${boardId}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'notes', filter: `boardId=eq.${boardId}` }, payload => {
-            if (payload.eventType === 'INSERT') addNoteToBoard(payload.new);
-            if (payload.eventType === 'UPDATE') updateNoteOnBoard(payload.new);
-            if (payload.eventType === 'DELETE') removeNoteFromBoard(payload.old.id);
-          })
-          .subscribe();
+                  if (payload.eventType === 'INSERT') addNoteToBoard(payload.new);
+                  if (payload.eventType === 'UPDATE') updateNoteOnBoard(payload.new);
+                  if (payload.eventType === 'DELETE') removeNoteFromBoard(payload.old.id);
+                }
+              )
+              .subscribe();
+            
+            unsubscribeNotes = channel; // store reference to unsubscribe later
         }
         
         function showBoardSelection() {
