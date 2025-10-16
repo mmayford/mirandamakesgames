@@ -915,9 +915,12 @@ function addNoteToBoard(noteData) {
     
     // Scale positions and sizes based on current corkboard width
     noteContainer.style.left = ((noteData.x || 100) * scale) + 'px';
-    noteContainer.style.top = (noteData.y || 100) + 'px'; // Keep Y absolute for vertical scrolling
-    noteContainer.style.width = ((noteData.width || 200) * scale) + 'px';
-    noteContainer.style.height = ((noteData.height || 200) * scale) + 'px';
+    noteContainer.style.top = (noteData.y || 100) + 'px';
+    
+    // Don't scale the actual dimensions - only scale positioning
+    noteContainer.style.width = (noteData.width || 200) + 'px';
+    noteContainer.style.height = (noteData.height || 200) + 'px';
+    
     noteContainer.dataset.noteId = noteData.id;
     noteContainer.style.zIndex = noteData.z_index || highestZIndex++;
     noteContainer.dataset.originalX = noteData.x || 100;
@@ -956,6 +959,10 @@ function addNoteToBoard(noteData) {
             const textElement = document.createElement('div');
             textElement.className = 'note-text';
             textElement.textContent = noteData.content;
+            
+            // Scale font size based on note size and content length
+            scaleTextToFit(textElement, noteData.width || 200, noteData.height || 200);
+            
             noteElement.appendChild(textElement);
         }
     }
@@ -1004,6 +1011,57 @@ function addNoteToBoard(noteData) {
     corkboard.appendChild(noteContainer);
 }
 
+// Add this function to scale text to fit the note
+function scaleTextToFit(textElement, width, height) {
+    const content = textElement.textContent;
+    const maxWidth = width - 30; // Account for padding
+    const maxHeight = height - 40; // Account for padding and pin
+    
+    // Calculate optimal font size based on content length and note size
+    let fontSize = 16; // Base font size
+    
+    // Adjust based on content length
+    if (content.length > 100) {
+        fontSize = 12;
+    } else if (content.length > 50) {
+        fontSize = 14;
+    }
+    
+    // Adjust based on note size
+    const area = width * height;
+    if (area < 30000) { // Small notes
+        fontSize = Math.max(10, fontSize - 2);
+    } else if (area > 80000) { // Large notes
+        fontSize = Math.min(20, fontSize + 2);
+    }
+    
+    textElement.style.fontSize = fontSize + 'px';
+    textElement.style.lineHeight = (fontSize * 1.2) + 'px';
+}
+
+// Update the resize listener to handle text scaling
+window.addEventListener('resize', function() {
+    const scale = calculateScale();
+    const noteContainers = document.querySelectorAll('.note-container');
+    
+    noteContainers.forEach(container => {
+        if (container.dataset.originalX && container.dataset.originalWidth) {
+            // Only scale the position, not the size
+            container.style.left = (parseFloat(container.dataset.originalX) * scale) + 'px';
+            // Keep original width and height
+            container.style.width = container.dataset.originalWidth + 'px';
+            container.style.height = container.dataset.originalHeight + 'px';
+            
+            // Update text scaling for text notes
+            const textElement = container.querySelector('.note-text');
+            if (textElement) {
+                const width = parseFloat(container.dataset.originalWidth);
+                const height = parseFloat(container.dataset.originalHeight);
+                scaleTextToFit(textElement, width, height);
+            }
+        }
+    });
+});
         async function bringToFront(element, noteId) {
             highestZIndex++;
             element.style.zIndex = highestZIndex;
