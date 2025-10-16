@@ -132,31 +132,40 @@
             background: rgba(255, 255, 255, 0.8);
         }
         
-        /* Corkboard styling */
-        .corkboard-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-        
-        .corkboard-frame {
-            width: 100vw;
-            height: 5000px;
-            border: 15px solid #b07c57;
-            box-shadow: 
-                inset 0 0 30px rgba(0, 0, 0, 0.4),
-                0 10px 25px rgba(0, 0, 0, 0.4);
-            background-image: 
-                radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px),
-                linear-gradient(135deg, #a5724b 0%, #b07c57 100%);
-            background-size: 20px 20px, 100% 100%;
-            position: relative;
-            margin: 0 auto;
-        }
+/* Corkboard styling - RESPONSIVE WIDTH FIX */
+.corkboard-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw; /* Ensure full viewport width */
+    height: 100vh;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+    overflow-y: auto;
+}
+
+.corkboard-frame {
+    width: 100vw; /* Always full viewport width */
+    min-width: 100vw; /* Prevent shrinking below viewport width */
+    height: 5000px;
+    border: 15px solid #b07c57;
+    box-shadow: 
+        inset 0 0 30px rgba(0, 0, 0, 0.4),
+        0 10px 25px rgba(0, 0, 0, 0.4);
+    background-image: 
+        radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px),
+        linear-gradient(135deg, #a5724b 0%, #b07c57 100%);
+    background-size: 20px 20px, 100% 100%;
+    position: relative;
+    margin: 0 auto;
+}
+
+#corkboard {
+    position: absolute;
+    width: 100%; /* Fill the corkboard frame */
+    height: 100%;
+    overflow: visible;
+    z-index: 1;
+}
         
         .loading {
             position: fixed;
@@ -207,14 +216,6 @@
             background: #ff85c0;
             transform: translateY(-3px);
             box-shadow: 0 6px 15px rgba(255, 158, 201, 0.6);
-        }
-        
-        #corkboard {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: visible;
-            z-index: 1;
         }
         
         .note-container {
