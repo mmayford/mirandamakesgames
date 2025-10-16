@@ -524,6 +524,8 @@
         let currentBoardCreator = "";
         let unsubscribeNotes = null;
         let scrollY = 0;
+        let baseCorkboardWidth = 1920; // Reference width for scaling
+        let currentScale = 1;
 
        // DOM elements
         const corkboard = document.getElementById('corkboard');
@@ -891,102 +893,96 @@
             }
         }
         
-        function addNoteToBoard(noteData) {
-            // Check if note already exists
-            if (document.querySelector(`[data-note-id="${noteData.id}"]`)) return;
-            
-            // Create container for note and pin
-            const noteContainer = document.createElement('div');
-            noteContainer.className = 'note-container';
-            noteContainer.style.left = (noteData.x || 100) + 'px';
-            noteContainer.style.top = (noteData.y || 100) + 'px';
-            noteContainer.style.width = (noteData.width || 200) + 'px';
-            noteContainer.style.height = (noteData.height || 200) + 'px';
-            noteContainer.dataset.noteId = noteData.id;
-            noteContainer.style.zIndex = noteData.z_index || highestZIndex++;
-            
-            // Create pin
-            const pin = document.createElement('div');
-            pin.className = 'pin';
-            noteContainer.appendChild(pin);
-            
-            // Create note content
-            let noteElement;
-            
-            if (noteData.type === 'image') {
-                // Create pinned image element
-                noteElement = document.createElement('div');
-                noteElement.className = 'pinned-image';
-                noteElement.style.width = '100%';
-                noteElement.style.height = '100%';
-                
-                const imgElement = document.createElement('img');
-                imgElement.src = noteData.content;
-                imgElement.onerror = function() {
-                    console.error("Failed to load image:", noteData.content);
-                    this.style.display = 'none';
-                };
-                noteElement.appendChild(imgElement);
-                
-            } else {
-                // Create sticky note element
-                noteElement = document.createElement('div');
-                noteElement.className = 'note';
-                noteElement.style.width = '100%';
-                noteElement.style.height = '100%';
-                noteElement.setAttribute('data-color', noteData.color || 'yellow');
-                
-                if (noteData.type === 'text') {
-                    const textElement = document.createElement('div');
-                    textElement.className = 'note-text';
-                    textElement.textContent = noteData.content;
-                    noteElement.appendChild(textElement);
-                }
-            }
-            
-            noteContainer.appendChild(noteElement);
-            
-            // Add slight rotation for natural look
-            const rotation = noteData.rotation || (Math.random() * 4 - 2);
-            noteContainer.style.transform = `rotate(${rotation}deg)`;
-            
-            if (noteData.user_id === currentUser.id) {
-                noteElement.classList.add('mine');
-                
-                // Add delete button for user's own notes
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.innerHTML = '×';
-                deleteBtn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    if (confirm('Delete this note?')) {
-                        deleteNote(noteData.id);
-                    }
-                });
-                noteElement.appendChild(deleteBtn);
-            }
-            
-            // Add resize handle for ALL notes (everyone can resize)
-            const resizeHandle = document.createElement('div');
-            resizeHandle.className = 'resize-handle';
-            noteElement.appendChild(resizeHandle);
-            
-            // Make resizable
-            makeResizable(noteContainer, noteData.id);
-            
-            // Make draggable
-            makeDraggable(noteContainer, noteData.id);
-            
-            // Bring to front on click
-            noteContainer.addEventListener('mousedown', function(e) {
-                if (!e.target.classList.contains('delete-btn') && 
-                    !e.target.classList.contains('resize-handle')) {
-                    bringToFront(noteContainer, noteData.id);
-                }
-            });
-            
-            corkboard.appendChild(noteContainer);
+// Add this function to calculate scaling
+function calculateScale() {
+    const corkboardFrame = document.querySelector('.corkboard-frame');
+    if (corkboardFrame) {
+        currentScale = corkboardFrame.offsetWidth / baseCorkboardWidth;
+        return currentScale;
+    }
+    return 1;
+}
+
+// Modify the addNoteToBoard function to use relative positioning
+function addNoteToBoard(noteData) {
+    // Check if note already exists
+    if (document.querySelector(`[data-note-id="${noteData.id}"]`)) return;
+    
+    const scale = calculateScale();
+    
+    // Create container for note and pin
+    const noteContainer = document.createElement('div');
+    noteContainer.className = 'note-container';
+    
+    // Scale positions and sizes based on current corkboard width
+    noteContainer.style.left = ((noteData.x || 100) * scale) + 'px';
+    noteContainer.style.top = (noteData.y || 100) + 'px'; // Keep Y absolute for vertical scrolling
+    noteContainer.style.width = ((noteData.width || 200) * scale) + 'px';
+    noteContainer.style.height = ((noteData.height || 200) * scale) + 'px';
+    noteContainer.dataset.noteId = noteData.id;
+    noteContainer.style.zIndex = noteData.z_index || highestZIndex++;
+    noteContainer.dataset.originalX = noteData.x || 100;
+    noteContainer.dataset.originalY = noteData.y || 100;
+    noteContainer.dataset.originalWidth = noteData.width || 200;
+    noteContainer.dataset.originalHeight = noteData.height || 200;
+
+    // Rest of your existing addNoteToBoard code remains the same...
+    // Create pin
+    const pin = document.createElement('div');
+    pin.className = 'pin';
+    noteContainer.appendChild(pin);
+
+    // Create note content
+    let noteElement;
+    
+    if (noteData.type === 'image') {
+        // Create pinned image element
+        noteElement = document.createElement('div');
+        noteElement.className = 'pinned-image';
+        
+        const imgElement = document.createElement('img');
+        imgElement.src = noteData.content;
+        imgElement.onerror = function() {
+            console.error("Failed to load image:", noteData.content);
+            this.style.display = 'none';
+        };
+        noteElement.appendChild(imgElement);
+        
+    } else {
+        // Create sticky note element
+        noteElement = document.createElement('div');
+        noteElement.className = 'note';
+        noteElement.setAttribute('data-color', noteData.color || 'yellow');
+        
+        if (noteData.type === 'text') {
+            const textElement = document.createElement('div');
+            textElement.className = 'note-text';
+            textElement.textContent = noteData.content;
+            noteElement.appendChild(textElement);
         }
+    }
+    
+    noteContainer.appendChild(noteElement);
+    
+    // Add slight rotation for natural look
+    const rotation = noteData.rotation || (Math.random() * 4 - 2);
+    noteContainer.style.transform = `rotate(${rotation}deg)`;
+    
+    if (noteData.user_id === currentUser.id) {
+        noteElement.classList.add('mine');
+        
+        // Add delete button for user's own notes
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (confirm('Delete this note?')) {
+                deleteNote(noteData.id);
+            }
+        });
+        noteElement.appendChild(deleteBtn);
+    }
 
         async function bringToFront(element, noteId) {
             highestZIndex++;
@@ -1038,137 +1034,165 @@
             else console.log('note container not found, UI cant update!');
         }
 
-        function makeDraggable(element, noteId) {
-            let isDragging = false;
-            let startX, startY;
-            let startLeft, startTop;
-            
-            // Make both the pin and note draggable
-            const pin = element.querySelector('.pin');
-            const note = element.querySelector('.note, .pinned-image');
-            
-            [pin, note].forEach(draggableElement => {
-                draggableElement.addEventListener('mousedown', function(e) {
-                    // Don't start drag if clicking on delete button or resize handle
-                    if (e.target.classList.contains('delete-btn') || 
-                        e.target.classList.contains('resize-handle')) return;
-                    
-                    isDragging = true;
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    
-                    // Get current position
-                    startLeft = parseInt(element.style.left);
-                    startTop = parseInt(element.style.top);
-                    
-                    element.style.zIndex = highestZIndex++;
-                    e.preventDefault();
-                });
-            });
-            
-            document.addEventListener('mousemove', function(e) {
-                if (!isDragging) return;
-                
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                
-                const newX = startLeft + dx;
-                const newY = startTop + dy;
-                
-                // Allow notes to be placed anywhere on the board
-                element.style.left = newX + 'px';
-                element.style.top = newY + 'px';
-            });
-            
-   
-        document.addEventListener('mouseup', async function() {
-            if (isDragging) {
-                isDragging = false;
-                
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('notes')
-                        .update({
-                            x: parseInt(element.style.left),
-                            y: parseInt(element.style.top),
-                            z_index: parseInt(element.style.zIndex)
-                        })
-                        .eq('id', noteId)
-                        .select(); // Add this to see what it actually updated
+// Modify the makeDraggable function to store original positions
+function makeDraggable(element, noteId) {
+    let isDragging = false;
+    let startX, startY;
+    let startLeft, startTop;
     
-                } catch (err) {
-                    console.error('Caught exception:', err);
-                }
-            }
+    const scale = calculateScale();
+    
+    // Make both the pin and note draggable
+    const pin = element.querySelector('.pin');
+    const note = element.querySelector('.note, .pinned-image');
+    
+    [pin, note].forEach(draggableElement => {
+        draggableElement.addEventListener('mousedown', function(e) {
+            // Don't start drag if clicking on delete button or resize handle
+            if (e.target.classList.contains('delete-btn') || 
+                e.target.classList.contains('resize-handle')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // Get current position (scaled)
+            startLeft = parseInt(element.style.left);
+            startTop = parseInt(element.style.top);
+            
+            element.style.zIndex = highestZIndex++;
+            e.preventDefault();
         });
-        }
-
-        function makeResizable(element, noteId) {
-            let isResizing = false;
-            let startX, startY;
-            let startWidth, startHeight;
-            let startLeft, startTop;
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        const newX = startLeft + dx;
+        const newY = startTop + dy;
+        
+        // Update scaled position
+        element.style.left = newX + 'px';
+        element.style.top = newY + 'px';
+        
+        // Store original (unscaled) position for database
+        element.dataset.originalX = (newX / scale).toString();
+        element.dataset.originalY = (newY / scale).toString();
+    });
+    
+    document.addEventListener('mouseup', async function() {
+        if (isDragging) {
+            isDragging = false;
             
-            const resizeHandle = element.querySelector('.resize-handle');
-            
-            resizeHandle.addEventListener('mousedown', function(e) {
-                isResizing = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                startWidth = parseInt(element.style.width);
-                startHeight = parseInt(element.style.height);
-                startLeft = parseInt(element.style.left);
-                startTop = parseInt(element.style.top);
-                
-                element.style.zIndex = highestZIndex++;
-                e.stopPropagation();
-                e.preventDefault();
-            });
-            
-            document.addEventListener('mousemove', function(e) {
-                if (!isResizing) return;
-                
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                
-                // Calculate new dimensions with smaller minimum size constraints
-                const newWidth = Math.max(80, startWidth + dx);
-                const newHeight = Math.max(80, startHeight + dy);
-                
-                // Apply new size
-                element.style.width = newWidth + 'px';
-                element.style.height = newHeight + 'px';
-            });
-            
-            document.addEventListener('mouseup', async function() {
-                if (isResizing) {
-                    isResizing = false;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('notes')
+                    .update({
+                        x: parseFloat(element.dataset.originalX),
+                        y: parseFloat(element.dataset.originalY),
+                        z_index: parseInt(element.style.zIndex)
+                    })
+                    .eq('id', noteId);
                     
-                    // Update size in database
-                    try {
-                        const { error } = await supabaseClient
-                            .from('notes')
-                            .update({
-                                width: parseInt(element.style.width),
-                                height: parseInt(element.style.height),
-                                z_index: parseInt(element.style.zIndex)
-                            })
-                            .eq('id', noteId);
-                        
-                        if (error) {
-                            console.error("Error updating note size:", error);
-                        }
-                    } catch (error) {
-                        console.error("Error updating note size:", error);
-                    }
+                if (error) {
+                    console.error("Error updating note position:", error);
                 }
-            });
+            } catch (err) {
+                console.error('Caught exception:', err);
+            }
         }
+    });
+}
+
+// Modify the makeResizable function to store original sizes
+function makeResizable(element, noteId) {
+    let isResizing = false;
+    let startX, startY;
+    let startWidth, startHeight;
+    
+    const scale = calculateScale();
+    
+    const resizeHandle = element.querySelector('.resize-handle');
+    
+    resizeHandle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = parseInt(element.style.width);
+        startHeight = parseInt(element.style.height);
+        
+        element.style.zIndex = highestZIndex++;
+        e.stopPropagation();
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isResizing) return;
+        
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        // Calculate new dimensions with smaller minimum size constraints
+        const newWidth = Math.max(80, startWidth + dx);
+        const newHeight = Math.max(80, startHeight + dy);
+        
+        // Apply new scaled size
+        element.style.width = newWidth + 'px';
+        element.style.height = newHeight + 'px';
+        
+        // Store original (unscaled) size for database
+        element.dataset.originalWidth = (newWidth / scale).toString();
+        element.dataset.originalHeight = (newHeight / scale).toString();
+    });
+    
+    document.addEventListener('mouseup', async function() {
+        if (isResizing) {
+            isResizing = false;
+            
+            // Update size in database
+            try {
+                const { error } = await supabaseClient
+                    .from('notes')
+                    .update({
+                        width: parseFloat(element.dataset.originalWidth),
+                        height: parseFloat(element.dataset.originalHeight),
+                        z_index: parseInt(element.style.zIndex)
+                    })
+                    .eq('id', noteId);
+                
+                if (error) {
+                    console.error("Error updating note size:", error);
+                }
+            } catch (error) {
+                console.error("Error updating note size:", error);
+            }
+        }
+    });
+}
+
+// Add resize listener to recalculate scale when window resizes
+window.addEventListener('resize', function() {
+    const scale = calculateScale();
+    const noteContainers = document.querySelectorAll('.note-container');
+    
+    noteContainers.forEach(container => {
+        if (container.dataset.originalX && container.dataset.originalWidth) {
+            container.style.left = (parseFloat(container.dataset.originalX) * scale) + 'px';
+            container.style.width = (parseFloat(container.dataset.originalWidth) * scale) + 'px';
+            container.style.height = (parseFloat(container.dataset.originalHeight) * scale) + 'px';
+            // Note: Y position remains absolute for vertical scrolling
+        }
+    });
+});
 
         // Add text note
         document.getElementById('add-text').addEventListener('click', async function() {
             const text = document.getElementById('text-note').value;
             if (text.trim()) {
+                const scale = calculateScale();
                 const newNote = {
                     id: 'note_' + Date.now(),
                     type: 'text',
@@ -1213,7 +1237,8 @@
                 try {
                     // Upload the image to Supabase Storage
                     const imageUrl = await uploadImage(this.files[0]);
-                    
+
+                    const scale = calculateScale();
                     const newNote = {
                         id: 'note_' + Date.now(),
                         type: 'image',
