@@ -218,20 +218,12 @@
             box-shadow: 0 6px 15px rgba(255, 158, 201, 0.6);
         }
         
-/* Make notes responsive */
-.note-container {
-    position: absolute;
-    z-index: 10;
-    filter: drop-shadow(4px 4px 8px rgba(0, 0, 0, 0.2));
-    /* Notes will now be positioned relative to corkboard size via JavaScript */
-}
-
 .note, .pinned-image {
     width: 100% !important;
     height: 100% !important;
 }
         
-        /*.note { position: relative; min-width: 80px; min-height: 80px; padding: 15px; box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; align-items: center; transition: box-shadow 0.3s; overflow: hidden; }*/
+        .note { position: relative; min-width: 80px; min-height: 80px; padding: 15px; box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; align-items: center; transition: box-shadow 0.3s; overflow: hidden; }
         
         .note.mine {
             box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.25);
@@ -245,11 +237,11 @@
         
         .note-text { width: 100%; min-height: 50px; background: transparent; border: none; resize: none; font-family: 'Comic Sans MS', cursive; font-size: 16px; outline: none; flex-grow: 1; margin-top: 5px; padding: 5px; overflow-wrap: break-word; cursor: text; overflow: auto; } .note img { max-width: 100%; max-height: 200px; margin-top: 5px; object-fit: contain; }
         
-      /*  .pinned-image {
+       .pinned-image {
             box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.3);
             overflow: hidden;
             background: transparent;
-        }*/
+        }
         
         .pinned-image img {
             width: 100%;
