@@ -894,15 +894,20 @@
         }
         
 // Add this function to calculate scaling
+// Remove the scaling system and replace with fixed corkboard width
+let baseCorkboardWidth = 1920; // Fixed width for the corkboard
+
+// Update the calculateScale function to handle positioning differently
 function calculateScale() {
     const corkboardFrame = document.querySelector('.corkboard-frame');
     if (corkboardFrame) {
-        currentScale = corkboardFrame.offsetWidth / baseCorkboardWidth;
-        return currentScale;
+        // Return scale for positioning, but maintain fixed corkboard width
+        return corkboardFrame.offsetWidth / baseCorkboardWidth;
     }
     return 1;
 }
 
+// Update the addNoteToBoard function
 function addNoteToBoard(noteData) {
     // Check if note already exists
     if (document.querySelector(`[data-note-id="${noteData.id}"]`)) return;
@@ -913,14 +918,11 @@ function addNoteToBoard(noteData) {
     const noteContainer = document.createElement('div');
     noteContainer.className = 'note-container';
     
-    // Scale positions and sizes based on current corkboard width
-    noteContainer.style.left = ((noteData.x || 100) * scale) + 'px';
+    // Use absolute positioning relative to corkboard (not scaled for X)
+    noteContainer.style.left = (noteData.x || 100) + 'px';
     noteContainer.style.top = (noteData.y || 100) + 'px';
     
-    // Don't scale the actual dimensions - only scale positioning
-    noteContainer.style.width = (noteData.width || 200) + 'px';
-    noteContainer.style.height = (noteData.height || 200) + 'px';
-    
+    // Store original positions for reference
     noteContainer.dataset.noteId = noteData.id;
     noteContainer.style.zIndex = noteData.z_index || highestZIndex++;
     noteContainer.dataset.originalX = noteData.x || 100;
@@ -928,16 +930,19 @@ function addNoteToBoard(noteData) {
     noteContainer.dataset.originalWidth = noteData.width || 200;
     noteContainer.dataset.originalHeight = noteData.height || 200;
 
+    // Set note dimensions (not scaled)
+    noteContainer.style.width = (noteData.width || 200) + 'px';
+    noteContainer.style.height = (noteData.height || 200) + 'px';
+
     // Create pin
     const pin = document.createElement('div');
     pin.className = 'pin';
     noteContainer.appendChild(pin);
 
-    // Create note content
+    // Create note content (your existing code remains the same)
     let noteElement;
     
     if (noteData.type === 'image') {
-        // Create pinned image element
         noteElement = document.createElement('div');
         noteElement.className = 'pinned-image';
         
@@ -950,7 +955,6 @@ function addNoteToBoard(noteData) {
         noteElement.appendChild(imgElement);
         
     } else {
-        // Create sticky note element
         noteElement = document.createElement('div');
         noteElement.className = 'note';
         noteElement.setAttribute('data-color', noteData.color || 'yellow');
@@ -959,10 +963,7 @@ function addNoteToBoard(noteData) {
             const textElement = document.createElement('div');
             textElement.className = 'note-text';
             textElement.textContent = noteData.content;
-            
-            // Scale font size based on note size and content length
             scaleTextToFit(textElement, noteData.width || 200, noteData.height || 200);
-            
             noteElement.appendChild(textElement);
         }
     }
@@ -976,7 +977,6 @@ function addNoteToBoard(noteData) {
     if (noteData.user_id === currentUser.id) {
         noteElement.classList.add('mine');
         
-        // Add delete button for user's own notes
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-btn';
         deleteBtn.innerHTML = '×';
@@ -989,18 +989,13 @@ function addNoteToBoard(noteData) {
         noteElement.appendChild(deleteBtn);
     }
     
-    // Add resize handle for ALL notes (everyone can resize)
     const resizeHandle = document.createElement('div');
     resizeHandle.className = 'resize-handle';
     noteElement.appendChild(resizeHandle);
     
-    // Make resizable
     makeResizable(noteContainer, noteData.id);
-    
-    // Make draggable
     makeDraggable(noteContainer, noteData.id);
     
-    // Bring to front on click
     noteContainer.addEventListener('mousedown', function(e) {
         if (!e.target.classList.contains('delete-btn') && 
             !e.target.classList.contains('resize-handle')) {
@@ -1011,6 +1006,171 @@ function addNoteToBoard(noteData) {
     corkboard.appendChild(noteContainer);
 }
 
+// Update the makeDraggable function to use corkboard-relative coordinates
+function makeDraggable(element, noteId) {
+    let isDragging = false;
+    let startX, startY;
+    let startLeft, startTop;
+    
+    const pin = element.querySelector('.pin');
+    const note = element.querySelector('.note, .pinned-image');
+    
+    [pin, note].forEach(draggableElement => {
+        draggableElement.addEventListener('mousedown', function(e) {
+            if (e.target.classList.contains('delete-btn') || 
+                e.target.classList.contains('resize-handle')) return;
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // Get current position (corkboard-relative)
+            startLeft = parseInt(element.style.left);
+            startTop = parseInt(element.style.top);
+            
+            element.style.zIndex = highestZIndex++;
+            e.preventDefault();
+        });
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        const newX = startLeft + dx;
+        const newY = startTop + dy;
+        
+        // Update position (corkboard-relative)
+        element.style.left = newX + 'px';
+        element.style.top = newY + 'px';
+        
+        // Store original positions
+        element.dataset.originalX = newX.toString();
+        element.dataset.originalY = newY.toString();
+    });
+    
+    document.addEventListener('mouseup', async function() {
+        if (isDragging) {
+            isDragging = false;
+            
+            try {
+                const { data, error } = await supabaseClient
+                    .from('notes')
+                    .update({
+                        x: parseFloat(element.dataset.originalX),
+                        y: parseFloat(element.dataset.originalY),
+                        z_index: parseInt(element.style.zIndex)
+                    })
+                    .eq('id', noteId);
+                    
+                if (error) {
+                    console.error("Error updating note position:", error);
+                }
+            } catch (err) {
+                console.error('Caught exception:', err);
+            }
+        }
+    });
+}
+
+// Update the resize handler
+window.addEventListener('resize', function() {
+    // With this approach, notes maintain their corkboard-relative positions
+    // The corkboard container handles scrolling naturally
+    const noteContainers = document.querySelectorAll('.note-container');
+    
+    noteContainers.forEach(container => {
+        // Notes already have their correct corkboard-relative positions
+        // No need to adjust positions on resize
+        const textElement = container.querySelector('.note-text');
+        if (textElement) {
+            const width = parseFloat(container.dataset.originalWidth);
+            const height = parseFloat(container.dataset.originalHeight);
+            scaleTextToFit(textElement, width, height);
+        }
+    });
+});
+
+// Update the functions that create new notes to use corkboard-relative coordinates
+document.getElementById('add-text').addEventListener('click', async function() {
+    const text = document.getElementById('text-note').value;
+    if (text.trim()) {
+        const newNote = {
+            id: 'note_' + Date.now(),
+            type: 'text',
+            content: text,
+            // Use corkboard-relative coordinates (0 to corkboard width/height)
+            x: Math.round(Math.random() * (baseCorkboardWidth - 200)),
+            y: Math.round(Math.random() * 1000 + scrollY), // Add some vertical randomness
+            width: 200,
+            height: 200,
+            user_id: currentUser.id,
+            board_id: currentboard_id,
+            color: selectedColor,
+            rotation: Math.random() * 4 - 2,
+            z_index: highestZIndex++
+        };
+        
+        try {
+            const { error } = await supabaseClient
+                .from('notes')
+                .insert([newNote]);
+            
+            if (error) {
+                console.error("Error adding text note:", error);
+                return;
+            }
+            
+            console.log("Text note added successfully");
+            document.getElementById('text-note').value = '';
+            addNoteToBoard(newNote);
+        } catch (error) {
+            console.error("Error adding text note:", error);
+        }
+    }
+});
+
+// Similarly update the image upload handler
+document.getElementById('image-upload').addEventListener('change', async function() {
+    if (this.files && this.files[0]) {
+        try {
+            const imageUrl = await uploadImage(this.files[0]);
+
+            const newNote = {
+                id: 'note_' + Date.now(),
+                type: 'image',
+                content: imageUrl,
+                x: Math.round(Math.random() * (baseCorkboardWidth - 200)),
+                y: Math.round(Math.random() * 1000 + scrollY),
+                width: 200,
+                height: 200,
+                user_id: currentUser.id,
+                board_id: currentboard_id,
+                rotation: Math.random() * 4 - 2,
+                z_index: highestZIndex++
+            };
+            
+            const { error } = await supabaseClient
+                .from('notes')
+                .insert([newNote]);
+            
+            if (error) {
+                console.error("Error adding image note:", error);
+                return;
+            }
+            
+            console.log("Image note added successfully");
+            addNoteToBoard(newNote);
+            
+        } catch (error) {
+            console.error("Error adding image note:", error);
+        }
+        this.value = '';
+    }
+});
+        
 // Add this function to scale text to fit the note
 function scaleTextToFit(textElement, width, height) {
     const content = textElement.textContent;
@@ -1111,82 +1271,8 @@ window.addEventListener('resize', function() {
             if (noteContainer) noteContainer.remove();
             else console.log('note container not found, UI cant update!');
         }
+    
 
-        // ... your existing code up to the makeResizable function ...
-
-// Add the missing makeDraggable function
-function makeDraggable(element, noteId) {
-    let isDragging = false;
-    let startX, startY;
-    let startLeft, startTop;
-    
-    const scale = calculateScale();
-    
-    // Make both the pin and note draggable
-    const pin = element.querySelector('.pin');
-    const note = element.querySelector('.note, .pinned-image');
-    
-    [pin, note].forEach(draggableElement => {
-        draggableElement.addEventListener('mousedown', function(e) {
-            // Don't start drag if clicking on delete button or resize handle
-            if (e.target.classList.contains('delete-btn') || 
-                e.target.classList.contains('resize-handle')) return;
-            
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            
-            // Get current position (scaled)
-            startLeft = parseInt(element.style.left);
-            startTop = parseInt(element.style.top);
-            
-            element.style.zIndex = highestZIndex++;
-            e.preventDefault();
-        });
-    });
-    
-    document.addEventListener('mousemove', function(e) {
-        if (!isDragging) return;
-        
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        
-        const newX = startLeft + dx;
-        const newY = startTop + dy;
-        
-        // Update scaled position
-        element.style.left = newX + 'px';
-        element.style.top = newY + 'px';
-        
-        // Store original (unscaled) position for database
-        element.dataset.originalX = (newX / scale).toString();
-        element.dataset.originalY = (newY / scale).toString();
-    });
-    
-    document.addEventListener('mouseup', async function() {
-        if (isDragging) {
-            isDragging = false;
-            
-            try {
-                const { data, error } = await supabaseClient
-                    .from('notes')
-                    .update({
-                        x: parseFloat(element.dataset.originalX),
-                        y: parseFloat(element.dataset.originalY),
-                        z_index: parseInt(element.style.zIndex)
-                    })
-                    .eq('id', noteId);
-                    
-                if (error) {
-                    console.error("Error updating note position:", error);
-                }
-            } catch (err) {
-                console.error('Caught exception:', err);
-            }
-        }
-    });
-}
-    
 // Modify the makeResizable function to store original sizes
 function makeResizable(element, noteId) {
     let isResizing = false;
@@ -1253,105 +1339,11 @@ function makeResizable(element, noteId) {
     });
 }
 
-// Add resize listener to recalculate scale when window resizes
-window.addEventListener('resize', function() {
-    const scale = calculateScale();
-    const noteContainers = document.querySelectorAll('.note-container');
-    
-    noteContainers.forEach(container => {
-        if (container.dataset.originalX && container.dataset.originalWidth) {
-            container.style.left = (parseFloat(container.dataset.originalX) * scale) + 'px';
-            container.style.width = (parseFloat(container.dataset.originalWidth) * scale) + 'px';
-            container.style.height = (parseFloat(container.dataset.originalHeight) * scale) + 'px';
-            // Note: Y position remains absolute for vertical scrolling
-        }
-    });
-});
-
-        // Add text note
-        document.getElementById('add-text').addEventListener('click', async function() {
-            const text = document.getElementById('text-note').value;
-            if (text.trim()) {
-                const scale = calculateScale();
-                const newNote = {
-                    id: 'note_' + Date.now(),
-                    type: 'text',
-                    content: text,
-                    x: Math.round(Math.random() * (corkboardContainer.offsetWidth - 200)),
-                    y: Math.round(Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY),
-                    width: 200,
-                    height: 200,
-                    user_id: currentUser.id,
-                    board_id: currentboard_id,
-                    color: selectedColor,
-                    rotation: Math.random() * 4 - 2,
-                    z_index: highestZIndex++
-                };
-                
-                try {
-                    const { error } = await supabaseClient
-                        .from('notes')
-                        .insert([newNote]);
-                    
-                    if (error) {
-                        console.error("Error adding text note:", error);
-                        return;
-                    }
-                    
-                    console.log("Text note added successfully");
-                    document.getElementById('text-note').value = '';
-                    addNoteToBoard(newNote);
-                } catch (error) {
-                    console.error("Error adding text note:", error);
-                }
-            }
-        });
-
         // Add image note
         document.getElementById('add-image').addEventListener('click', function() {
             document.getElementById('image-upload').click();
         });
         
-        document.getElementById('image-upload').addEventListener('change', async function() {
-            if (this.files && this.files[0]) {
-                try {
-                    // Upload the image to Supabase Storage
-                    const imageUrl = await uploadImage(this.files[0]);
-
-                    const scale = calculateScale();
-                    const newNote = {
-                        id: 'note_' + Date.now(),
-                        type: 'image',
-                        content: imageUrl,
-                        x: Math.round(Math.random() * (corkboardContainer.offsetWidth - 200)),
-                        y: Math.round(Math.random() * (corkboardContainer.offsetHeight - 200) + scrollY),
-                        width: 200,
-                        height: 200,
-                        user_id: currentUser.id,
-                        board_id: currentboard_id,
-                        rotation: Math.random() * 4 - 2,
-                        z_index: highestZIndex++
-                    };
-                    
-                    // Save to Supabase
-                    const { error } = await supabaseClient
-                        .from('notes')
-                        .insert([newNote]);
-                    
-                    if (error) {
-                        console.error("Error adding image note:", error);
-                        return;
-                    }
-                    
-                    console.log("Image note added successfully");
-                    addNoteToBoard(newNote);
-                    
-                } catch (error) {
-                    console.error("Error adding image note:", error);
-                }
-                this.value = ''; // Reset file input
-            }
-        });
 
         // Delete a note
 async function deleteNote(noteId) {
